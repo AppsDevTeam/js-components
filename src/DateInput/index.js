@@ -22,7 +22,7 @@ function initDate(input, options) {
 	});
 }
 
-async function run(el, options) {
+function run(el, options) {
 	$.nette.ext('live').after(function($el) {
 		$el.find('[data-adt-date-input]').each(function() {
 			var options = $(this).data('adt-date-input');

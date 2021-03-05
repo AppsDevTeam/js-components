@@ -40,7 +40,7 @@ function initRecaptcha($form) {
 	})();
 }
 
-async function afterSnippetUpdate($el) {
+function afterSnippetUpdate($el) {
 	$el.find('[data-adt-recaptcha]').each(function() {
 		// jiz registrovane timery smazu, protoze je potreba celou recaptchu inicializovat znovu
 		delete recaptchaTimeouts[$(this).attr('id')];
