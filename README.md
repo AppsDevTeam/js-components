@@ -26,7 +26,7 @@ For example, there's an ExampleForm located in /app/Components/Forms/ExampleForm
 4. In `/app/Components/Forms/ExampleForm` create `index.js` with
 
 ```
-const run = (el, options) => {
+const run = (options) => {
     ... your code ...
 };
 

@@ -21,12 +21,12 @@ const init = (selector, path) => {
 
 		if (path.includes('/')) {
 			import('app/' + path + '/index.js').then(component => {
-				component.default.run(el, componentsConfig[selector] || {});
+				component.default.run(componentsConfig[selector] || {});
 			});
 
 		} else {
 			import('adt-js-components/src/' + path + '/index.js').then(component => {
-				component.default.run(el, componentsConfig[selector] || {});
+				component.default.run(componentsConfig[selector] || {});
 			});
 		}
 	});

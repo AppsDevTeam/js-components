@@ -1,6 +1,6 @@
 const Scrollparent = require("scrollparent");
 
-function run(el, options) {
+function run(options) {
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			settings.nette.el.closest('form').find('button').prop('disabled', true);

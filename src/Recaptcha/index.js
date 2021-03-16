@@ -57,7 +57,7 @@ function afterSnippetUpdate($el) {
 	});
 }
 
-async function run(el, options) {
+async function run(options) {
 	siteKey = options.siteKey;
 
 	addHeadStyle();
