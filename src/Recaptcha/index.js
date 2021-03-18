@@ -28,36 +28,30 @@ function loadRecaptchaScriptAsync() {
 	});
 }
 
-function initRecaptcha($form) {
-	(function setRecaptchaToken() {
-		// ziskame a nastavime token
-		grecaptcha.execute(siteKey, {action: 'submit'}).then(function (token) {
-			$form.find('input[name=recaptchaToken]').val(token);
-		});
+function initRecaptcha($submit, e, options) {
+	grecaptcha.execute(siteKey, {action: 'submit'}).then(function (token) {
+		$submit.closest('form').find('input[name=recaptchaToken]').val(token);
 
-		// kazdych 110s ho refreshneme, protoze ma platnost pouze 120s
-		recaptchaTimeouts[$form.attr('id')] = setTimeout(setRecaptchaToken, 110000);
-	})();
-}
-
-function afterSnippetUpdate($el) {
-	$el.find('[data-adt-recaptcha]').each(function() {
-		// jiz registrovane timery smazu, protoze je potreba celou recaptchu inicializovat znovu
-		delete recaptchaTimeouts[$(this).attr('id')];
-
-		// pokud ma formular data initOnLoad true, chci recaptchu inicializovat ihned
-		if ($(this).data('adt-recaptcha').initOnLoad) {
-			initRecaptcha($(this));
+		if (options.callback) {
+			window[options.callback]();
 		} else {
-			// jinak chci recaptchu inicializovat az pri kliknuti do libovolneho pole formulare
-			$(this).one('click', 'input, textarea, select', function() {
-				initRecaptcha($(this).closest('form'));
-			});
+			$submit.adtAjax(e)
 		}
 	});
 }
 
-async function run(options) {
+function afterSnippetUpdate($el, options) {
+	$el.find('[data-adt-recaptcha] [type=submit]').each(function() {
+		$(this).on('click', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+
+			initRecaptcha($(this).closest('form'), e, $.extend(true, options, $(this).data('adt-recaptcha')));
+		});
+	});
+}
+
+async function run(el, options) {
 	siteKey = options.siteKey;
 
 	addHeadStyle();
@@ -69,7 +63,7 @@ async function run(options) {
 	}
 
 	grecaptcha.ready(() => {
-		$.nette.ext('live').after(afterSnippetUpdate);
+		$.nette.ext('live').after($el => afterSnippetUpdate($el, options));
 	});
 }
 
