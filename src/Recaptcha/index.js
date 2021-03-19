@@ -46,7 +46,7 @@ function afterSnippetUpdate($el, options) {
 			e.preventDefault();
 			e.stopPropagation();
 
-			initRecaptcha($(this).closest('form'), e, $.extend(true, options, $(this).data('adt-recaptcha')));
+			initRecaptcha($(this), e, $.extend(true, options, $(this).data('adt-recaptcha')));
 		});
 	});
 }
