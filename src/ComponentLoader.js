@@ -14,8 +14,7 @@ const init = (selector, path) => {
 		if (loadedComponents.includes(path)) return;
 
 		// there is no element using this component
-		const el = document.querySelector(`[data-adt-${selector}]`);
-		if (!el) return;
+		if (!document.querySelector(`[data-adt-${componentName}]`)) continue;
 
 		loadedComponents.push(path);
 
