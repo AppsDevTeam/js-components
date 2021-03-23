@@ -14,7 +14,7 @@ const init = (selector, path) => {
 		if (loadedComponents.includes(path)) return;
 
 		// there is no element using this component
-		if (!document.querySelector(`[data-adt-${componentName}]`)) continue;
+		if (!document.querySelector(`[data-adt-${selector}]`)) return;
 
 		loadedComponents.push(path);
 
@@ -39,6 +39,14 @@ const initDateInput = () => {
 	init('date-input', 'DateInput');
 };
 
+const initGLightbox = () => {
+	init('glightbox', 'GLightbox');
+};
+
+const initGoogleMaps = () => {
+	init('google-maps', 'GoogleMaps');
+};
+
 const initRecaptcha = () => {
 	init('recaptcha', 'Recaptcha');
 };
@@ -49,6 +57,10 @@ const initSelect2 = () => {
 
 const initSubmitForm = () => {
 	init('submit-form', 'SubmitForm');
+};
+
+const initTinyMCE = () => {
+	init('tinymce', 'TinyMCE');
 };
 
 const getFirstDiffCharIndex = (a, b) => {
@@ -73,8 +85,11 @@ export default {
 	init,
 	initCurrencyInput,
 	initDateInput,
+	initGLightbox,
+	initGoogleMaps,
 	initRecaptcha,
 	initSelect2,
 	initSubmitForm,
+	initTinyMCE,
 	loadScssModule,
 };
