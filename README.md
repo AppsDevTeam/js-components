@@ -82,3 +82,11 @@ Attribute `data-adt-submit-form` must be included in your HTML!
 AdtJsComponents.initSubmitForm();
 ```
 
+### Ajax Select
+
+Attribute `data-adt-ajax-select` must be included in your HTML!
+
+```
+AdtJsComponents.initAjaxSelect();
+```
+
