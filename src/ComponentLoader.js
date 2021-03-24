@@ -63,6 +63,10 @@ const initTinyMCE = () => {
 	init('tinymce', 'TinyMCE');
 };
 
+const initAjaxSelect = () => {
+	init('ajax-select', 'AjaxSelect');
+};
+
 const getFirstDiffCharIndex = (a, b) => {
 	const longerLength = Math.max(a.length, b.length);
 	for (let i = 0; i < longerLength; i++) {
@@ -91,5 +95,6 @@ export default {
 	initSelect2,
 	initSubmitForm,
 	initTinyMCE,
+	initAjaxSelect,
 	loadScssModule,
 };
