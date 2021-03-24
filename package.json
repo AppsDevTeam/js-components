@@ -10,6 +10,21 @@
     "type": "git",
     "url": "git+https://github.com/AppsDevTeam/js-components.git"
   },
+  "dependencies": {
+    "select2": "^4.0.13",
+    "@ttskch/select2-bootstrap4-theme": "^1.4.0",
+    "autonumeric": "^4.6.0",
+    "flatpickr": "^4.6.3",
+    "script-loader": "^0.7.2",
+    "timepicker": "^1.13.4",
+    "glightbox": "^3.0.7",
+    "@googlemaps/js-api-loader": "^1.11.1",
+    "scrollparent": "^2.0.1",
+    "tinymce": "^5.7.0",
+    "tinymce-i18n": "^20.12.25",
+    "jquery": "^3.4.1",
+    "nette.ajax.js": "^2.3.0"
+  },
   "author": "Apps Dev Team",
   "license": "MIT",
   "bugs": {
