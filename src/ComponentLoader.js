@@ -100,5 +100,6 @@ export default {
 	initSubmitForm,
 	initTinyMCE,
 	initAjaxSelect,
+	initInputClear,
 	loadScssModule,
 };
