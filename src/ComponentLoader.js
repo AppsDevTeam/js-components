@@ -67,6 +67,10 @@ const initAjaxSelect = () => {
 	init('ajax-select', 'AjaxSelect');
 };
 
+const initInputClear = () => {
+	init('input-clear', 'InputClear');
+};
+
 const getFirstDiffCharIndex = (a, b) => {
 	const longerLength = Math.max(a.length, b.length);
 	for (let i = 0; i < longerLength; i++) {
