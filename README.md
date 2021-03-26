@@ -90,3 +90,23 @@ Attribute `data-adt-ajax-select` must be included in your HTML!
 AdtJsComponents.initAjaxSelect();
 ```
 
+### Input Clear
+
+Attribute `data-adt-input-clear` must be included in your HTML!
+
+The option `selector` have to be set to select inputs to clear.
+
+The option `confirmMessage` can be set to clear confirmation.
+
+```
+AdtJsComponents.initInputClear();
+```
+
+```html
+<div data-adt-input-clear="{selector: '.input-clear-all', confirmMessage: 'Do you really want to clear all inputs?'}">Clear all</div>
+<div data-adt-input-clear="{selector: '.input-clear-special'}">Clear special</div>
+
+<input type="text" name="input1" class="input-clear-all input-clear-special">
+<input type="text" name="input2" class="input-clear-all">
+<input type="text" name="input3" class="input-clear-all input-clear-special">
+```
