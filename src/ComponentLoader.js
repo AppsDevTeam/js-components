@@ -6,7 +6,7 @@ const init = (selector, path) => {
 		Object.keys(componentsConfig).length === 0 &&
 		typeof document.querySelector(`body`).dataset.componentsConfig !== 'undefined'
 	) {
-		componentsConfig = JSON.parse(document.querySelector(`body`).dataset.componentsConfig);
+		componentsConfig = JSON.parse(document.querySelector(`body`).dataset.adtJsComponents);
 	}
 
 	$.nette.ext('live').after(function($el) {
