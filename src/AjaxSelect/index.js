@@ -75,7 +75,6 @@ function run(options) {
 				url: this.options.url,
 				dataType: 'json',
 				delay: 250,
-				minimumInputLength: this.customOptions.minimumInputLength,
 				data: function (term, page) {
 					var options = $.extend({ }, self.options.entityOptions);
 					options[self.options.queryParam] = term.term;
