@@ -1,6 +1,7 @@
 import 'select2';
 import 'select2/dist/css/select2.min.css';
 import '@ttskch/select2-bootstrap4-theme/dist/select2-bootstrap4.min.css';
+import 'select2/dist/js/i18n/cs'
 
 function run(options) {
 	/**
@@ -9,6 +10,7 @@ function run(options) {
 	function AjaxSelect($element) {
 		this.$originalElement = $element;
 		this.options = this.$originalElement.data('ajax-select');
+		this.customOptions = $.extend({minimumInputLength: 2, language: "en"}, this.$originalElement.data('ajax-select-options') || {});
 		this.init();
 	}
 
@@ -44,8 +46,6 @@ function run(options) {
 			itemsIds.push(items[key].id);
 		}
 
-		var minimumInputLength = (self.options.minimumInputLength !== undefined) ? self.options.minimumInputLength : 2;
-
 		this.$originalElement.select2({
 			tags: !!this.$originalElement.data('allow-new-value'),
 			insertTag: function (data, tag) {
@@ -61,9 +61,10 @@ function run(options) {
 					text: params.term
 				};
 			},
+			language: this.customOptions.language,
 			placeholder: this.options.prompt || undefined,
 			allowClear: this.options.prompt ? true : false,
-			minimumInputLength: minimumInputLength,
+			minimumInputLength: this.customOptions.minimumInputLength,
 			multiple: this.options.multiple || false,
 			formatResultCssClass: function (object) {
 				if (object.inactive == true) {
@@ -74,15 +75,11 @@ function run(options) {
 				url: this.options.url,
 				dataType: 'json',
 				delay: 250,
-				minimumInputLength: minimumInputLength,
 				data: function (term, page) {
 					var options = $.extend({ }, self.options.entityOptions);
 					options[self.options.queryParam] = term.term;
 
-					var customOptions = self.$originalElement.data('ajax-select-options');
-					if (customOptions) {
-						$.extend(options, customOptions);
-					}
+					$.extend(options, self.customOptions);
 
 					return {
 						entityName: self.options.entityName,
