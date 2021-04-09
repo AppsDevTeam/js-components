@@ -2,11 +2,12 @@ const loadedComponents = [];
 let componentsConfig = {};
 
 const init = (selector, path) => {
+	let bodyDataset = document.querySelector(`body`).dataset.adtJsComponents;
+
 	if (
-		Object.keys(componentsConfig).length === 0 &&
-		typeof document.querySelector(`body`).dataset.componentsConfig !== 'undefined'
+		Object.keys(componentsConfig).length === 0 && typeof bodyDataset !== 'undefined'
 	) {
-		componentsConfig = JSON.parse(document.querySelector(`body`).dataset.adtJsComponents);
+		componentsConfig = JSON.parse(bodyDataset);
 	}
 
 	$.nette.ext('live').after(function($el) {
