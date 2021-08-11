@@ -1,6 +1,6 @@
 import 'select2';
-import 'select2/src/scss/core';
-import 'select2-bootstrap-5-theme/src/include-all'
+import 'select2/dist/css/select2.min.css';
+import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
 import 'select2/dist/js/i18n/cs'
 
 function run(options) {
