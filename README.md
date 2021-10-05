@@ -58,6 +58,14 @@ Attribute `data-adt-date-input` must be included in your HTML!
 AdtJsComponents.initDateInput();
 ```
 
+### Form Replicator
+
+Attribute `data-adt-replicator` must be included in your HTML!
+
+```
+AdtJsComponents.initFormReplicator();
+```
+
 ### Recaptcha
 
 Attribute `data-adt-recaptcha` must be included in your HTML!

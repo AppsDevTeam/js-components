@@ -40,6 +40,10 @@ const initDateInput = () => {
 	init('date-input', 'DateInput');
 };
 
+const initFormReplicator = () => {
+	init('replicator', 'FormReplicator');
+};
+
 const initGLightbox = () => {
 	init('glightbox', 'GLightbox');
 };
@@ -94,6 +98,7 @@ export default {
 	init,
 	initCurrencyInput,
 	initDateInput,
+	initFormReplicator,
 	initGLightbox,
 	initGoogleMaps,
 	initRecaptcha,
