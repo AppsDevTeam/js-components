@@ -4,10 +4,12 @@ function run(options) {
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette) {
-				settings.nette.el.closest('form').find('button').prop('disabled', true);
-				settings.nette.el.find('.js-spinner').removeClass('d-none');
-				settings.nette.el.closest('form').find('.js-error').remove();
-				settings.nette.el.closest('form').find('.is-invalid').removeClass('is-invalid');
+				if (!settings.nette.el.data('submit-form-off')) {
+					settings.nette.el.closest('form').find('button').prop('disabled', true);
+					settings.nette.el.find('.js-spinner').removeClass('d-none');
+					settings.nette.el.closest('form').find('.js-error').remove();
+					settings.nette.el.closest('form').find('.is-invalid').removeClass('is-invalid');
+				}
 			}
 		},
 		success: function (payload, status, xhr, settings) {
