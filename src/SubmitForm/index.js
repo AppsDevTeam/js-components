@@ -4,6 +4,8 @@ function run(options) {
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette) {
+				let toEnabled = settings.nette.form.find('button:enabled');
+				settings.nette.form.data('toEnabled', toEnabled);
 				settings.nette.form.find('button').prop('disabled', true);
 				settings.nette.el.find('.js-spinner').removeClass('d-none');
 				settings.nette.form.find('.js-error').remove();
@@ -14,7 +16,9 @@ function run(options) {
 			// if there is no redirect, we will enable buttons
 			if (!payload.redirect && settings.nette) {
 				settings.nette.el.find('.js-spinner').addClass('d-none');
-				settings.nette.form.find('button').prop('disabled', false);
+				settings.nette.form.data('toEnabled').each(function () {
+					$(this).prop('disabled', false);
+				});
 			}
 		},
 		error: function (xhr, status, error, settings) {
@@ -22,7 +26,9 @@ function run(options) {
 				settings.nette.form.find('.js-errors').append('<div class="alert alert-danger js-error">' + xhr.responseJSON['error'] + '</div>');
 
 				settings.nette.el.find('.js-spinner').addClass('d-none');
-				settings.nette.form.find('button').prop('disabled', false);
+				settings.nette.form.data('toEnabled').each(function () {
+					$(this).prop('disabled', false);
+				});
 			}
 		},
 		complete:  function (xhr, status, settings) {
