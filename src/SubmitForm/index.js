@@ -6,15 +6,17 @@ function run(options) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
 				settings.nette.form.data('enabledButtons', settings.nette.form.find('button:enabled'));
 				settings.nette.form.find('button').prop('disabled', true);
-				settings.nette.el.find('.js-spinner').removeClass('d-none');
-				settings.nette.form.find('.js-error').remove();
+				settings.nette.el.css('width', settings.nette.el.outerWidth());
+				settings.nette.el.data('originalContent', settings.nette.el.html());
+				settings.nette.el.html('<span class="spinner-border spinner-border-sm"></span>');
+				settings.nette.form.find('.alert-danger').remove();
 				settings.nette.form.find('.is-invalid').removeClass('is-invalid');
 			}
 		},
 		success: function (payload, status, xhr, settings) {
 			// if there is no redirect, we will enable buttons
 			if (!payload.redirect && settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				settings.nette.el.find('.js-spinner').addClass('d-none');
+				settings.nette.el.html(settings.nette.el.data('originalContent'));
 				settings.nette.form.data('enabledButtons').each(function () {
 					$(this).prop('disabled', false);
 				});
@@ -22,9 +24,9 @@ function run(options) {
 		},
 		error: function (xhr, status, error, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				settings.nette.form.find('.js-errors').append('<div class="alert alert-danger js-error">' + xhr.responseJSON['error'] + '</div>');
+				settings.nette.form.prepend('<div class="alert alert-danger">' + xhr.responseText + '</div>');
 
-				settings.nette.el.find('.js-spinner').addClass('d-none');
+				settings.nette.el.html(settings.nette.el.data('originalContent'));
 				settings.nette.form.data('enabledButtons').each(function () {
 					$(this).prop('disabled', false);
 				});
@@ -32,8 +34,8 @@ function run(options) {
 		},
 		complete:  function (xhr, status, settings) {
 			// if there are errors we will scroll to first of them
-			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.js-error').length > 0) {
-				const $error = settings.nette.form.find('.js-error:first');
+			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.alert-danger').length > 0) {
+				const $error = settings.nette.form.find('.alert-danger:first');
 
 				// we have to find first scrollable element (it can be document or modal for example)
 				let scrollParent = Scrollparent($error[0]);
