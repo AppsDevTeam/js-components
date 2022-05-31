@@ -21,7 +21,7 @@ function initDate(input, options) {
 		enableTime: options.type === 'datetime' || options.type === 'datetime-local',
 		time_24hr: true,
 		locale: require(`flatpickr/dist/l10n/${locale}.js`).default[locale],
-		defaultDate: options.value,
+		defaultDate: options.value ? new Date(options.value) : null,
 		minDate: options.minDate ? new Date(options.minDate) : null,
 		maxDate: options.maxDate ? new Date(options.maxDate) : null
 	});
