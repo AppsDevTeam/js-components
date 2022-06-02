@@ -15,12 +15,20 @@ function initTime(input, options) {
 	});
 }
 
-function initDate(input, options) {
+async function initDate(input, options) {
+	if (locale === 'en') {
+		options.locale = null;
+	} else if (locale === 'el') {
+		options.locale = 'gr';
+	} else {
+		options.locale = locale;
+	}
+
 	flatpickr(input, {
 		dateFormat: options.format, // default datetime-local
 		enableTime: options.type === 'datetime' || options.type === 'datetime-local',
 		time_24hr: true,
-		locale: require(`flatpickr/dist/l10n/${locale}.js`).default[locale],
+		locale: options.locale ? require('flatpickr/dist/l10n/' + options.locale + '.js').default[options.locale] : null,
 		defaultDate: options.value ? new Date(options.value) : null,
 		minDate: options.minDate ? new Date(options.minDate) : null,
 		maxDate: options.maxDate ? new Date(options.maxDate) : null
