@@ -1,6 +1,69 @@
 const Scrollparent = require("scrollparent");
 
+function isList(el) {
+	return el.name.endsWith('[]') || el.type === 'radio';
+}
+
+function getErrorElementId(el) {
+	return isList(el) ? el.id.split('-').slice(0, -1).join('-') : el.id;
+}
+
+function scrollToFirstError(form) {
+	const el = $(form).find('.alert-danger:first, .is-invalid:first')[0];
+
+	// we have to find first scrollable element (it can be document or modal for example)
+	let scrollParent = Scrollparent(el);
+	if (scrollParent.tagName === 'BODY') {
+		scrollParent = document.scrollingElement || document.documentElement;
+	}
+
+	$(scrollParent).animate({
+		scrollTop:  el.getBoundingClientRect().top - el.offsetParent.getBoundingClientRect().top - 100
+	}, 500);
+}
+
 function run(options) {
+	$.nette.ext('live').after(function($el) {
+		$el.find('[data-app-submit-form]').find('input, textarea, select').on('input', function(e) {
+			this.classList.remove('is-invalid');
+			if (isList(this)) {
+				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
+			}
+		});
+	});
+
+	if (typeof Nette !== "undefined") {
+		Nette.showFormErrors = function(form, errors) {
+			// remove previously displayed error messages
+			for (const error of errors) {
+				document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML = '';
+			}
+
+			for (const error of errors) {
+				// because radio lists and checkbox lists contains one error message multiple times
+				if (!document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML.includes(error.message)) {
+					document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML += '<div>' + error.message + '</div>';
+				}
+
+				error.element.classList.add('is-invalid');
+				// because of radio lists and checkbox lists
+				if (isList(error.element)) {
+					error.element.parentNode.classList.add('is-invalid');
+				}
+				// because of https://github.com/twbs/bootstrap/issues/25110
+				if (error.element.parentNode.classList.contains('input-group')) {
+					error.element.parentNode.classList.add('has-validation');
+				}
+			}
+
+			if (errors.length) {
+				scrollToFirstError(form);
+			}
+		};
+	} else {
+		console.error('Package nette-forms is missing!');
+	}
+	
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
@@ -34,18 +97,8 @@ function run(options) {
 		},
 		complete:  function (xhr, status, settings) {
 			// if there are errors we will scroll to first of them
-			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.alert-danger').length > 0) {
-				const $error = settings.nette.form.find('.alert-danger:first');
-
-				// we have to find first scrollable element (it can be document or modal for example)
-				let scrollParent = Scrollparent($error[0]);
-				if (scrollParent.tagName === 'BODY') {
-					scrollParent = document.scrollingElement || document.documentElement;
-				}
-
-				$(scrollParent).animate({
-					scrollTop: $error.offset().top - 100
-				}, 500);
+			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.alert-danger, .is-invalid').length > 0) {
+				scrollToFirstError(settings.nette.form);
 			}
 		}
 	});
