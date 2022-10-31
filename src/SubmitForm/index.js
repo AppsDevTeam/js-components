@@ -48,8 +48,6 @@ function run(options) {
 				error.element.classList.add('is-invalid');
 				// because of radio lists and checkbox lists
 				if (isList(error.element)) {
-					const border = error.element.styles.border;
-					console.log(border);
 					error.element.parentNode.classList.add('is-invalid');
 				}
 				// because of https://github.com/twbs/bootstrap/issues/25110
