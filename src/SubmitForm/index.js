@@ -13,13 +13,12 @@ function scrollToFirstError(form) {
 
 	// we have to find first scrollable element (it can be document or modal for example)
 	let scrollParent = Scrollparent(el);
+
 	if (scrollParent.tagName === 'BODY') {
 		scrollParent = document.scrollingElement || document.documentElement;
 	}
 
-	$(scrollParent).animate({
-		scrollTop:  el.getBoundingClientRect().top - el.offsetParent.getBoundingClientRect().top - 100
-	}, 500);
+	scrollParent.scrollBy({top: el.getBoundingClientRect().top - 100, behavior: 'smooth'});
 }
 
 function run(options) {
@@ -63,7 +62,7 @@ function run(options) {
 	} else {
 		console.error('Package nette-forms is missing!');
 	}
-	
+
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
