@@ -20,7 +20,7 @@ const init = (selector, path) => {
 		loadedComponents.push(path);
 
 		if (path.includes('/')) {
-			import(path + '/index.js').then(component => {
+			import('JsComponents/' + path + '/index.js').then(component => {
 				component.default.run(componentsConfig[selector] || {});
 			});
 
