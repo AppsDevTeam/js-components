@@ -39,6 +39,17 @@ export default { run };
 AdtJsComponents.init('example-form', 'Components/Forms/ExampleForm');
 ```
 
+6. Example of `resolve` in your project `webpack.config.js`, if all applications js modules are relatively to `app`.
+
+```
+resolve: {
+	modules: ['node_modules'],
+	alias: {
+		JsComponents: path.resolve(__dirname, 'app')
+	}
+}
+```
+
 
 ## Predefined components
 
