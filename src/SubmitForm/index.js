@@ -22,6 +22,10 @@ function scrollToFirstError(form) {
 }
 
 function run(options) {
+
+	// Unregister ext "redirect", for own implemenation in ext "submitForm".succcess
+	$.nette.ext('redirect', null);
+
 	$.nette.ext('live').after(function($el) {
 		$el.find('[data-adt-submit-form]').find('input, textarea, select').on('input', function(e) {
 			this.classList.remove('is-invalid');
@@ -66,6 +70,14 @@ function run(options) {
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
+
+				let beforeCallback = settings.nette.el.attr('data-adt-submit-form-before-callback');
+				if (beforeCallback) {
+					if (!window[beforeCallback]()) {
+						return false;
+					}
+				}
+
 				settings.nette.form.data('enabledButtons', settings.nette.form.find('button:enabled'));
 				settings.nette.form.find('button').prop('disabled', true);
 				settings.nette.el.css('width', settings.nette.el.outerWidth());
@@ -76,8 +88,21 @@ function run(options) {
 			}
 		},
 		success: function (payload, status, xhr, settings) {
+			if (settings.nette && settings.nette.el) {
+				let afterCallback = settings.nette.el.attr('data-adt-submit-form-after-callback');
+				if (afterCallback) {
+					window[afterCallback]();
+				}
+			}
+
+			// Own implementation redirecting (same as in nette.ajax.js ext "redirect"), but after our afterCallback
+			if (payload.redirect) {
+				window.location.href = payload.redirect;
+				return false;
+			}
+
 			// if there is no redirect, we will enable buttons
-			if (!payload.redirect && settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
+			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
 				settings.nette.el.html(settings.nette.el.data('originalContent'));
 				settings.nette.form.data('enabledButtons').each(function () {
 					$(this).prop('disabled', false);
