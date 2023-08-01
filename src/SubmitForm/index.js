@@ -66,6 +66,14 @@ function run(options) {
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
+
+				let confirmCallback = settings.nette.el.attr('data-adt-submit-form-confirm-callback');
+				if (confirmCallback) {
+					if (!window[confirmCallback]()) {
+						return false;
+					}
+				}
+
 				settings.nette.form.data('enabledButtons', settings.nette.form.find('button:enabled'));
 				settings.nette.form.find('button').prop('disabled', true);
 				settings.nette.el.css('width', settings.nette.el.outerWidth());
