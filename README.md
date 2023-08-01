@@ -93,6 +93,19 @@ Attribute `data-adt-submit-form` must be included in your HTML!
 AdtJsComponents.initSubmitForm();
 ```
 
+Own confirm function can be added on each submit.
+Function is invoked before submit and form is not submitted if the function return false.
+
+```html
+<script>
+	function myConfirm() {
+		return confirm('Do you realy want to submit the form?');
+	}
+</script>
+
+<button ... data-adt-submit-form-confirm-callback="myConfirm">Submit</button>
+```
+
 ### Ajax Select
 
 Attribute `data-adt-ajax-select` must be included in your HTML!
