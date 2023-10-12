@@ -62,6 +62,7 @@ function run(options) {
 				};
 			},
 			language: this.customOptions.language,
+			dropdownParent: this.customOptions.dropdownParent ? $(this.customOptions.dropdownParent) : document.body,
 			placeholder: this.options.prompt || undefined,
 			allowClear: this.options.prompt ? true : false,
 			minimumInputLength: this.customOptions.minimumInputLength,
