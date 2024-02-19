@@ -103,10 +103,15 @@ function run(options) {
 
 			// if there is no redirect, we will enable buttons
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				settings.nette.el.html(settings.nette.el.data('originalContent'));
-				settings.nette.form.data('enabledButtons').each(function () {
-					$(this).prop('disabled', false);
-				});
+				// the form or the entire page may be redrawn
+				if (settings.nette.el.data('originalContent')) {
+					settings.nette.el.html(settings.nette.el.data('originalContent'));
+				}
+				if (settings.nette.form.data('enabledButtons')) {
+					settings.nette.form.data('enabledButtons').each(function () {
+						$(this).prop('disabled', false);
+					});
+				}
 			}
 		},
 		error: function (xhr, status, error, settings) {
