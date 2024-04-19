@@ -9,7 +9,7 @@ function run(options) {
 	 */
 	function AjaxSelect($element) {
 		this.$originalElement = $element;
-		this.options = this.$originalElement.data('ajax-select');
+		this.options = this.$originalElement.data('adt-ajax-select');
 		this.customOptions = $.extend({minimumInputLength: 2, language: "en"}, this.$originalElement.data('ajax-select-options') || {});
 		this.init();
 	}
@@ -108,7 +108,7 @@ function run(options) {
 	};
 
 	AjaxSelect.init = function ($container) {
-		$container.find('select[data-ajax-select]').each(function () {
+		$container.find('select[data-adt-ajax-select]').each(function () {
 			new AjaxSelect($(this));
 		});
 	};
