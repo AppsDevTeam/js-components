@@ -91,7 +91,7 @@ function run(options) {
 			if (settings.nette && settings.nette.el) {
 				let afterCallback = settings.nette.el.attr('data-adt-submit-form-after-callback');
 				if (afterCallback) {
-					window[afterCallback]();
+					window[afterCallback](payload, status, xhr, settings);
 				}
 			}
 
