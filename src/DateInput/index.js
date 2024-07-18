@@ -31,7 +31,11 @@ async function initDate(input, options) {
 		locale: options.locale ? require('flatpickr/dist/l10n/' + options.locale + '.js').default[options.locale] : null,
 		defaultDate: options.value ? new Date(options.value) : null,
 		minDate: options.minDate ? new Date(options.minDate) : null,
-		maxDate: options.maxDate ? new Date(options.maxDate) : null
+		maxDate: options.maxDate ? new Date(options.maxDate) : null,
+		allowInput: options.allowInput ? options.allowInput : null,
+		altInput: options.altInput ? options.altInput : null,
+		altFormat: options.altFormat ? options.altFormat: null,
+		altInputClass: options.altInputClass ? options.altInputClass : null,
 	});
 }
 
