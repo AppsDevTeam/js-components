@@ -1,6 +1,6 @@
 {
   "name": "adt-js-components",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "JavaScript components for Nette framework",
   "main": "index.js",
   "scripts": {
