@@ -23,14 +23,28 @@ function scrollToFirstError(form) {
 
 function run(options) {
 
-	$.nette.ext('live').after(function($el) {
-		$el.find('[data-adt-submit-form]').find('input, textarea, select').on('input', function(e) {
+	function applyEventHandlers($el) {
+		$el.find('input, textarea, select').on('input', function(e) {
 			this.classList.remove('is-invalid');
 			if (isList(this)) {
 				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
 			}
 		});
+	}
+
+	const observer = new MutationObserver(function(mutationsList, observer) {
+		mutationsList.forEach(function(mutation) {
+			if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+				$(mutation.addedNodes).each(function() {
+					applyEventHandlers($(this));
+				});
+			}
+		});
 	});
+
+	observer.observe($el.get(0), { childList: true, subtree: true });
+
+	applyEventHandlers($el);
 
 	if (typeof Nette !== "undefined") {
 		Nette.showFormErrors = function(form, errors) {
