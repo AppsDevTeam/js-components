@@ -1,11 +1,11 @@
 const Scrollparent = require("scrollparent");
 
 function isList(el) {
-	return el.name.endsWith('[]') || el.type === 'radio';
+	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio';
 }
 
 function getErrorElementId(el) {
-	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio'
+	return isList(el) ? el.id.split('-').slice(0, -1).join('-') : el.id;
 }
 
 function scrollToFirstError(form) {
