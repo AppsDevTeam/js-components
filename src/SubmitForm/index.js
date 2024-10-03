@@ -21,10 +21,9 @@ function scrollToFirstError(form) {
 	scrollParent.scrollBy({top: el.getBoundingClientRect().top - 100, behavior: 'smooth'});
 }
 
-function run(options) {
-
-	function applyEventHandlers($el) {
-		$el.find('input, textarea, select').on('input', function(e) {
+function run(options, $el) {
+	function applyEventHandlers(el) {
+		$(this).find('input, textarea, select').on('input', function(e) {
 			this.classList.remove('is-invalid');
 			if (isList(this)) {
 				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
@@ -32,19 +31,23 @@ function run(options) {
 		});
 	}
 
-	const observer = new MutationObserver(function(mutationsList, observer) {
-		mutationsList.forEach(function(mutation) {
-			if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-				$(mutation.addedNodes).each(function() {
-					applyEventHandlers($(this));
+	$.nette.ext('live').after(function($el) {
+		$el.find('[data-adt-submit-form]').each(function(e) {
+			const observer = new MutationObserver(function(mutationsList, observer) {
+				mutationsList.forEach(function(mutation) {
+					if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+						$(mutation.addedNodes).each(function() {
+							applyEventHandlers(this);
+						});
+					}
 				});
-			}
+			});
+
+			observer.observe(this, { childList: true, subtree: true });
+
+			applyEventHandlers(this);
 		});
 	});
-
-	observer.observe($el.get(0), { childList: true, subtree: true });
-
-	applyEventHandlers($el);
 
 	if (typeof Nette !== "undefined") {
 		Nette.showFormErrors = function(form, errors) {
