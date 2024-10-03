@@ -5,7 +5,7 @@ function isList(el) {
 }
 
 function getErrorElementId(el) {
-	return isList(el) ? el.id.split('-').slice(0, -1).join('-') : el.id;
+	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio'
 }
 
 function scrollToFirstError(form) {
