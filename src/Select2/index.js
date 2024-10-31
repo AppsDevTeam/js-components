@@ -10,6 +10,10 @@ function run(options) {
 			// musí zde být defaultní jazyk "en", pokud zde nebyl a byla importována čeština.. tak se i bez poslání json params nastavila čeština
 			$(this).select2($.extend({theme: 'bootstrap-5', language: "en"}, $(this).data('adt-select2') || {}));
 		});
+
+		$el.find('[data-adt-select2]').on('change', function(e) {
+			Nette.toggleForm($(e.currentTarget).closest('form')[0], e.currentTarget);
+		});
 	});
 }
 
