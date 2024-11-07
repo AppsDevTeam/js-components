@@ -71,6 +71,15 @@ function run(options) {
 					return 'inactive';
 				}
 			},
+			templateResult: function (data, container) {
+				if ('aria-posinset' in data) {
+					$(container).attr('aria-posinset', data['aria-posinset'])
+				}
+				if ('aria-setsize' in data) {
+					$(container).attr('aria-setsize', data['aria-setsize'])
+				}
+				return data.text;
+			},
 			ajax: {
 				url: this.options.url,
 				dataType: 'json',
