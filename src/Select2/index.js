@@ -32,6 +32,7 @@ function run(options) {
 	});
 }
 
+// Get all options in a Select2 dropdown - https://stackoverflow.com/a/41365100
 function select2Options($elementSelect2) {
 	let data = [];
 	let	adapter = $elementSelect2.data().select2.dataAdapter;
