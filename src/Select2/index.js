@@ -8,20 +8,15 @@ function run(options) {
 
 		$el.find('[data-adt-select2]').each(function () {
 			let $select2 = $(this);
-			$select2.attr('data-options-counter', 0);
 			$select2.select2(
 				$.extend(
 					{
 						theme: 'bootstrap-5',
 						language: "en", // musí zde být defaultní jazyk "en", pokud zde nebyl a byla importována čeština.. tak se i bez poslání json params nastavila čeština
 						templateResult: function (data, container) {
-							let counter = $select2.attr('data-options-counter');
-							let $options = select2Options($select2);
-							$(container).attr('aria-setsize', $options.length);
-							$(container).attr('aria-posinset', counter);
-							counter = parseInt(counter) + 1;
-							$select2.attr('data-options-counter', counter)
-
+							let options = select2Options($select2);
+							$(container).attr('aria-setsize', options.length);
+							$(container).attr('aria-posinset', getPositionOfData($(options), data.text));
 							return data.text;
 						},
 					},
@@ -40,15 +35,24 @@ function run(options) {
 function select2Options($elementSelect2) {
 	let data = [];
 	let	adapter = $elementSelect2.data().select2.dataAdapter;
-
 	$elementSelect2.children().each(function () {
 		if (!$(this).is('option') && !$(this).is('optgroup')) {
 			return true;
 		}
 		data.push(adapter.item($(this)));
 	});
-
 	return data;
+}
+
+function getPositionOfData($options, text) {
+	let counter = 1;
+	$options.each(function (key, el) {
+		if (text === el.text) {
+			return false;
+		}
+		counter = counter + 1;
+	});
+	return counter;
 }
 
 export default { run }
