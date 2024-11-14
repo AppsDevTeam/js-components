@@ -109,6 +109,18 @@ function run(options) {
 			width: '100%',
 		});
 
+		let $label = $(document).find("label[for='" + this.$originalElement.attr('id') + "']");
+
+		if ($label.length) {
+			let labelId = $label.attr('id');
+			if (labelId === undefined) {
+				$label.attr('id', this.$originalElement.attr('id') + 'Label');
+			}
+			this.$originalElement.parent().find('.select2-selection').attr(
+				'aria-labelledBy',
+				$label.attr('id')
+			);
+		}
 	};
 
 	AjaxSelect.prototype.destroy = function () {

@@ -23,6 +23,19 @@ function run(options) {
 					$(this).data('adt-select2') || {}
 				)
 			);
+
+			let $label = $(document).find("label[for='" + $select2.attr('id') + "']");
+
+			if ($label.length) {
+				let labelId = $label.attr('id');
+				if (labelId === undefined) {
+					$label.attr('id', $select2.attr('id') + 'Label');
+				}
+				$select2.parent().find('.select2-selection').attr(
+					'aria-labelledBy',
+					$label.attr('id')
+				);
+			}
 		});
 
 	});
