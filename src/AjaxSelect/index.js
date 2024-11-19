@@ -125,10 +125,12 @@ function run(options) {
 			);
 
 			if (this.options.multiple) {
-				this.$originalElement.parent().find('.select2-search__field').attr(
-					'aria-labelledBy',
-					$label.attr('id')
-				);
+				this.$originalElement.on("select2:open", function (e) {
+					self.$originalElement.parent().find('.select2-search__field').attr(
+						'aria-labelledBy',
+						$label.attr('id')
+					);
+				});
 			}
 		}
 	};
