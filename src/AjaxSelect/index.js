@@ -114,13 +114,22 @@ function run(options) {
 
 		if ($label.length) {
 			let labelId = $label.attr('id');
+
 			if (labelId === undefined) {
 				$label.attr('id', this.$originalElement.attr('id') + 'Label');
 			}
+
 			this.$originalElement.parent().find('.select2-selection').attr(
 				'aria-labelledBy',
 				$label.attr('id')
 			);
+
+			if (this.options.multiple) {
+				this.$originalElement.parent().find('.select2-search__field').attr(
+					'aria-labelledBy',
+					$label.attr('id')
+				);
+			}
 		}
 	};
 
