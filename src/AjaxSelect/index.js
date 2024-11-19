@@ -46,7 +46,7 @@ function run(options) {
 			itemsIds.push(items[key].id);
 		}
 
-		this.$originalElement.select2({
+		this.$originalElement.selectWoo({
 			tags: !!this.$originalElement.data('allow-new-value'),
 			insertTag: function (data, tag) {
 				// Insert the tag at the end of the results
