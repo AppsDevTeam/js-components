@@ -11,14 +11,14 @@ function run(options) {
 			$select2.select2(
 				$.extend(
 					{
-							theme: 'bootstrap4',
-							language: "en", // musí zde být defaultní jazyk "en", pokud zde nebyl a byla importována čeština.. tak se i bez poslání json params nastavila čeština
-							templateResult: function (data, container) {
-								let options = select2Options($select2);
-								$(container).attr('aria-setsize', options.length);
-								$(container).attr('aria-posinset', getPositionOfData($(options), data.text));
-								return data.text;
-							},
+						theme: 'bootstrap4',
+						language: "en", // musí zde být defaultní jazyk "en", pokud zde nebyl a byla importována čeština.. tak se i bez poslání json params nastavila čeština
+						templateResult: function (data, container) {
+							let options = select2Options($select2);
+							$(container).attr('aria-setsize', options.length);
+							$(container).attr('aria-posinset', getPositionOfData($(options), data.text));
+							return data.text;
+						},
 					},
 					$(this).data('adt-select2') || {}
 				)

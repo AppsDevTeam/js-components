@@ -1,7 +1,7 @@
-import 'select2';
-import 'select2/dist/css/select2.min.css';
+import '../../assets/selectWoo/dist/js/selectWoo';
+import '../../assets/selectWoo/dist/css/select2.min.css';
 import '@ttskch/select2-bootstrap4-theme/dist/select2-bootstrap4.min.css';
-import 'select2/dist/js/i18n/cs'
+import '../../assets/selectWoo/dist/js/i18n/cs'
 
 function run(options) {
 	/**
@@ -71,6 +71,7 @@ function run(options) {
 					return 'inactive';
 				}
 			},
+			dropdownParent: this.customOptions.dropdownParent ? $('#' + this.customOptions.dropdownParent) : $(document.body),
 			templateResult: function (data, container) {
 				if ('aria-posinset' in data) {
 					$(container).attr('aria-posinset', data['aria-posinset'])
