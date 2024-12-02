@@ -124,6 +124,13 @@ function run(options) {
 				$label.attr('id')
 			);
 
+			if (this.$originalElement.prop('required')) {
+				this.$originalElement.parent().find('.select2-selection').attr(
+					'aria-required',
+					'true'
+				);
+			}
+
 			if (this.options.multiple) {
 				this.$originalElement.on("select2:open", function (e) {
 					self.$originalElement.parent().find('.select2-search__field').attr(

@@ -36,6 +36,13 @@ function run(options) {
 					$label.attr('id')
 				);
 			}
+
+			if ($select2.prop('required')) {
+				$select2.parent().find('.select2-selection').attr(
+					'aria-required',
+					'true'
+				);
+			}
 		});
 
 	});
