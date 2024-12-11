@@ -4,16 +4,37 @@ import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
 import 'select2/dist/js/i18n/cs'
 
 function run(options) {
-	$.nette.ext('live').after(function($el) {
+	function applyEventHandlers(el) {
+		$(el)
+			.select2($.extend({theme: 'bootstrap-5', language: "en"}, $(this).data('adt-select2') || {}))
+			.on('change', function(e) {
+				Nette.toggleForm($(e.currentTarget).closest('form')[0], e.currentTarget);
+			});
+	}
 
-		$el.find('[data-adt-select2]').each(function () {
-			// musí zde být defaultní jazyk "en", pokud zde nebyl a byla importována čeština.. tak se i bez poslání json params nastavila čeština
-			$(this).select2($.extend({theme: 'bootstrap-5', language: "en"}, $(this).data('adt-select2') || {}));
-		});
+	const observer = new MutationObserver(function(mutationsList) {
+		mutationsList.forEach(function(mutation) {
+			if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+				$(mutation.addedNodes).each(function() {
+					if (this.nodeType === Node.ELEMENT_NODE) {
+						console.log(this);
+						if (this.hasAttribute('data-adt-select2')) {
+							applyEventHandlers(this);
+						}
 
-		$el.find('[data-adt-select2]').on('change', function(e) {
-			Nette.toggleForm($(e.currentTarget).closest('form')[0], e.currentTarget);
+						this.querySelectorAll('[data-adt-select2]').forEach(function(innerNode) {
+							applyEventHandlers(innerNode);
+						});
+					}
+				});
+			}
 		});
+	});
+
+	observer.observe(document.body, { childList: true, subtree: true });
+
+	document.querySelectorAll('[data-adt-select2]').forEach(function(innerNode) {
+		applyEventHandlers(innerNode);
 	});
 }
 
