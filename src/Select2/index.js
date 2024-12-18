@@ -17,7 +17,6 @@ function run(options) {
 			if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
 				$(mutation.addedNodes).each(function() {
 					if (this.nodeType === Node.ELEMENT_NODE) {
-						console.log(this);
 						if (this.hasAttribute('data-adt-select2')) {
 							applyEventHandlers(this);
 						}
