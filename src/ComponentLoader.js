@@ -71,6 +71,9 @@ const initAjaxSelect = () => {
 const initInputClear = () => {
 	init('input-clear', 'InputClear');
 };
+const initMap = () => {
+	init('map', 'Map');
+};
 
 const getFirstDiffCharIndex = (a, b) => {
 	const longerLength = Math.max(a.length, b.length);
@@ -102,5 +105,6 @@ export default {
 	initTinyMCE,
 	initAjaxSelect,
 	initInputClear,
+	initMap,
 	loadScssModule,
 };
