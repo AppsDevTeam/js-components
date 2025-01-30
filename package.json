@@ -23,7 +23,8 @@
     "tinymce": "^5.7.0",
     "tinymce-i18n": "^20.12.25",
     "nette.ajax.js": "^2.3.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3"
   },
   "peerDependencies": {
     "jquery": "^3.4.1"
