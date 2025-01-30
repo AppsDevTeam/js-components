@@ -6,10 +6,12 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 let siteKey;
+let markerImg;
 const mapInstances = new WeakMap();
 
 async function run(options) {
 	siteKey = options.siteKey;
+	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
 		const { position, zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
@@ -54,11 +56,12 @@ async function run(options) {
 			map.dragging.disable();
 		}
 
-		const markerOptions = {
-			icon: L.icon({
-				iconUrl: '//' + window.location.hostname + '/images/mapmarker.png',
-			}),
-		};
+		const markerOptions = {};
+		if (markerImg) {
+			markerOptions.icon = L.icon({
+				iconUrl: markerImg,
+			});
+		}
 		if (markers.length) {
 			const markerPositions = [];
 			const cluster = L.markerClusterGroup({
