@@ -22,7 +22,8 @@
     "scrollparent": "^2.0.1",
     "tinymce": "^5.7.0",
     "tinymce-i18n": "^20.12.25",
-    "nette.ajax.js": "^2.3.0"
+    "nette.ajax.js": "^2.3.0",
+    "leaflet": "^1.9.4"
   },
   "peerDependencies": {
     "jquery": "^3.4.1"
