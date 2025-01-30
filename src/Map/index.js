@@ -68,9 +68,9 @@ async function run(options) {
 				disableClusteringAtZoom: map.getMaxZoom()
 			});
 			for (const marker of markers) {
-				const mapMarker = L.marker(marker.position, markerOptions);
-				if (marker.handler) {
-					mapMarker.on('click', marker.handler);
+				const mapMarker = L.marker(marker.position, {...markerOptions, id: marker.id});
+				if (marker.callback) {
+					mapMarker.on('click', window[marker.callback]);
 				}
 				if (marker.popup) {
 					mapMarker.bindPopup(marker.popup)
