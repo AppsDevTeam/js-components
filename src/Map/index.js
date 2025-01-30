@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import "leaflet.markercluster"; // Načte plugin
+import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
@@ -86,9 +86,9 @@ async function run(options) {
 		}
 
 		if (callback) {
-			map.on('zoomend', callback);
-			map.on('moveend', callback);
-			map.on('dragend', callback);
+			map.on('zoomend', window[callback]);
+			map.on('moveend', window[callback]);
+			map.on('dragend', window[callback]);
 		}
 	}
 
