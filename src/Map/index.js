@@ -14,7 +14,7 @@ async function run(options) {
 	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
-		const { position, zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
+		const { position = [], zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
 
 		if (mapInstances.has(el)) {
 			mapInstances.get(el).remove();
