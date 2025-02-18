@@ -100,7 +100,7 @@ async function run(options) {
 			if (mutation.type === "childList") {
 				mutation.addedNodes.forEach(node => {
 					if (node.nodeType === 1 && node.hasAttribute("data-adt-map")) {
-						handleMapElement(node);
+						applyEventHandlers(node);
 					}
 				});
 			}
