@@ -49,8 +49,8 @@ async function run(options) {
 			map.setView(position, zoom);
 		}
 
+		map.scrollWheelZoom.disable();
 		if (hideControl) {
-			map.scrollWheelZoom.disable();
 			map.zoomControl.remove();
 			map.keyboard.disable();
 			map.dragging.disable();
