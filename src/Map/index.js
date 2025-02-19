@@ -14,7 +14,7 @@ async function run(options) {
 	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
-		const { position = [], zoom = 10, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
+		const { position = [], zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
 
 		if (mapInstances.has(el)) {
 			mapInstances.get(el).remove();
@@ -46,8 +46,11 @@ async function run(options) {
 		new LogoControl().addTo(map);
 
 		if (position.length) {
-			map.setView(position, zoom);
-			map.fitBounds([position]);
+			if (zoom) {
+				map.setView(position, zoom);
+			} else {
+				map.fitBounds([position]);
+			}
 		}
 
 		map.scrollWheelZoom.disable();
