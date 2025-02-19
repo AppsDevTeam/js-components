@@ -14,7 +14,7 @@ async function run(options) {
 	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
-		const { position = [], zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
+		const { position = [], zoom = 10, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
 
 		if (mapInstances.has(el)) {
 			mapInstances.get(el).remove();
@@ -47,6 +47,7 @@ async function run(options) {
 
 		if (position.length) {
 			map.setView(position, zoom);
+			map.fitBounds([position]);
 		}
 
 		map.scrollWheelZoom.disable();
@@ -58,34 +59,42 @@ async function run(options) {
 
 		const markerOptions = {};
 		if (markerImg) {
-			markerOptions.icon = L.icon({
-				iconUrl: markerImg,
-			});
-		}
-		if (markers.length) {
-			const markerPositions = [];
-			const cluster = L.markerClusterGroup({
-				disableClusteringAtZoom: map.getMaxZoom()
-			});
-			for (const marker of markers) {
-				const mapMarker = L.marker(marker.position, {...markerOptions, id: marker.id});
-				if (marker.callback) {
-					mapMarker.on('click', window[marker.callback]);
+			const img = new Image();
+			img.src = markerImg;
+			img.onload = function () {
+				markerOptions.icon = L.icon({
+					iconUrl: markerImg,
+					iconSize: [img.width, img.height],
+					iconAnchor: [img.width / 2, img.height]
+				});
+				if (markers.length) {
+					const markerPositions = [];
+					const cluster = L.markerClusterGroup({
+						disableClusteringAtZoom: map.getMaxZoom()
+					});
+					for (const marker of markers) {
+						const mapMarker = L.marker(marker.position, {...markerOptions, id: marker.id});
+						if (marker.callback) {
+							mapMarker.on('click', window[marker.callback]);
+						}
+						if (marker.popup) {
+							mapMarker.bindPopup(marker.popup);
+						} else if (marker.popupCallback) {
+							mapMarker.bindPopup(() => window[marker.popupCallback](mapMarker));
+						}
+						if (!marker.excludeFromBoundary) {
+							markerPositions.push(marker.position);
+						}
+						cluster.addLayer(mapMarker);
+					}
+					if (!position.length) {
+						map.fitBounds(markerPositions);
+					}
+					map.addLayer(cluster);
+				} else {
+					L.marker(position, markerOptions).addTo(map);
 				}
-				if (marker.popup) {
-					mapMarker.bindPopup(marker.popup)
-				}
-				if (!marker.excludeFromBoundary) {
-					markerPositions.push(marker.position);
-				}
-				cluster.addLayer(mapMarker);
-			}
-			if (!position.length) {
-				map.fitBounds(markerPositions);
-			}
-			map.addLayer(cluster);
-		} else {
-			L.marker(position, markerOptions).addTo(map);
+			};
 		}
 
 		if (callback) {
