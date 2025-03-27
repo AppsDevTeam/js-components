@@ -104,6 +104,7 @@ async function run(options) {
 			map.on('zoomend', window[callback]);
 			map.on('moveend', window[callback]);
 			map.on('dragend', window[callback]);
+			map.on('click', window[callback]);
 		}
 	}
 
