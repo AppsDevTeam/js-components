@@ -71,31 +71,9 @@ async function run(options) {
 					iconAnchor: [img.width / 2, img.height]
 				});
 				if (markers.length) {
-					const markerPositions = [];
-					const cluster = L.markerClusterGroup({
-						disableClusteringAtZoom: map.getMaxZoom()
-					});
-					for (const marker of markers) {
-						const mapMarker = L.marker(marker.position, {...markerOptions, id: marker.id});
-						if (marker.callback) {
-							mapMarker.on('click', window[marker.callback]);
-						}
-						if (marker.popup) {
-							mapMarker.bindPopup(marker.popup);
-						} else if (marker.popupCallback) {
-							mapMarker.bindPopup(() => window[marker.popupCallback](mapMarker));
-						}
-						if (!marker.excludeFromBoundary) {
-							markerPositions.push(marker.position);
-						}
-						cluster.addLayer(mapMarker);
-					}
-					if (!position.length) {
-						map.fitBounds(markerPositions);
-					}
-					map.addLayer(cluster);
+					addMarkers(map, markers, markerOptions, position);
 				} else {
-					L.marker(position, markerOptions).addTo(map);
+					createMarker({id: 0, position: position}, markerOptions).addTo(map);
 				}
 			};
 		}
@@ -134,6 +112,55 @@ async function run(options) {
 	document.querySelectorAll('[data-adt-map]').forEach(function(el) {
 		applyEventHandlers(el);
 	});
+}
+
+function addMarkers(map, markers, options, position) {
+	const positionsOfMarkers = [];
+	const cluster = L.markerClusterGroup({
+		disableClusteringAtZoom: map.getMaxZoom(),
+	});
+	for (const marker of markers) {
+		if (marker.img) {
+			let markerOptions = options;
+			let markerImage = new Image();
+			markerImage.src = marker.img;
+			markerImage.onload = function () {
+				markerOptions.icon = L.icon({
+					iconUrl: marker.img,
+					iconSize: [markerImage.width, markerImage.height],
+					iconAnchor: [markerImage.width / 2, markerImage.height]
+				});
+				createMarker(marker, markerOptions, cluster);
+			};
+		} else {
+			createMarker(marker, options, cluster);
+		}
+
+		if (!marker.excludeFromBoundary) {
+			positionsOfMarkers.push(marker.position);
+		}
+	}
+
+	if (!position.length) {
+		map.fitBounds(positionsOfMarkers);
+	}
+	map.addLayer(cluster);
+}
+
+function createMarker(marker, options, cluster = null) {
+	const mapMarker = L.marker(marker.position, {...options, id: marker.id});
+	if (marker.callback) {
+		mapMarker.on('click', window[marker.callback]);
+	}
+	if (marker.popup) {
+		mapMarker.bindPopup(marker.popup);
+	} else if (marker.popupCallback) {
+		mapMarker.bindPopup(() => window[marker.popupCallback](mapMarker));
+	}
+	if (cluster) {
+		cluster.addLayer(mapMarker);
+	}
+	return mapMarker;
 }
 
 export default { run }
