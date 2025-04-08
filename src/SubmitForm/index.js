@@ -52,9 +52,9 @@ function run(options, $el) {
 	if (typeof Nette !== "undefined") {
 		Nette.showFormErrors = function(form, errors) {
 			// remove previously displayed error messages
-			for (const error of errors) {
-				document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML = '';
-			}
+				form.querySelectorAll('[id$="-errors"]').forEach(el => {
+				el.innerHTML = '';
+			});
 
 			for (const error of errors) {
 				// because radio lists and checkbox lists contains one error message multiple times
