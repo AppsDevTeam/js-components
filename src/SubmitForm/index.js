@@ -21,9 +21,9 @@ function scrollToFirstError(form) {
 	scrollParent.scrollBy({top: el.getBoundingClientRect().top - 100, behavior: 'smooth'});
 }
 
-function run(options, $el) {
+function run(options) {
 	function applyEventHandlers(el) {
-		$(this).find('input, textarea, select').on('input', function(e) {
+		$(el).find('input, textarea, select').on('input', function(e) {
 			this.classList.remove('is-invalid');
 			if (isList(this)) {
 				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
