@@ -10,25 +10,37 @@ const init = (selector, path) => {
 		componentsConfig = JSON.parse(bodyDataset);
 	}
 
-	$.nette.ext('live').after(function($el) {
+	const observer = new MutationObserver((mutationsList) => {
 		// component is already loaded
 		if (loadedComponents.includes(path)) return;
 
-		// there is no element using this component
-		if (!document.querySelector(`[data-adt-${selector}]`)) return;
+		for (const mutation of mutationsList) {
+			if (mutation.type === 'childList') {
+				const target = mutation.target.querySelector(`[data-adt-${selector}]`);
 
-		loadedComponents.push(path);
+				if (target) {
+					loadedComponents.push(path);
 
-		if (path.includes('/')) {
-			import('JsComponents/' + path + '/index.js').then(component => {
-				component.default.run(componentsConfig[selector] || {});
-			});
+					if (path.includes('/')) {
+						import('JsComponents/' + path + '/index.js').then(component => {
+							component.default.run(componentsConfig[selector] || {});
+						});
 
-		} else {
-			import('adt-js-components/src/' + path + '/index.js').then(component => {
-				component.default.run(componentsConfig[selector] || {});
-			});
+					} else {
+						import('adt-js-components/src/' + path + '/index.js').then(component => {
+							component.default.run(componentsConfig[selector] || {});
+						});
+					}
+					break;
+				}
+			}
 		}
+	});
+
+	// Sleduj celý dokument pro změny ve stromu DOM
+	observer.observe(document.body, {
+		childList: true,
+		subtree: true,
 	});
 };
 
