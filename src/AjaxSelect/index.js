@@ -107,16 +107,36 @@ function run(options) {
 		this.$originalElement.select2('destroy');
 	};
 
-	AjaxSelect.init = function ($container) {
-		$container.find('select[data-adt-ajax-select]').each(function () {
-			new AjaxSelect($(this));
-		});
-	};
+	function applyEventHandlers(el) {
+		new AjaxSelect($(el));
+	}
 
-	$.nette.ext('live').after(function ($element) {
-		AjaxSelect.init($element);
+	const observer = new MutationObserver(mutations => {
+		mutations.forEach(mutation => {
+			if (mutation.type === "childList") {
+				mutation.addedNodes.forEach(node => {
+					if (node.nodeType === 1) {
+						if (node.hasAttribute("data-adt-ajax-select")) {
+							applyEventHandlers(node);
+						}
+
+						node.querySelectorAll('[data-adt-ajax-select]').forEach(child => {
+							applyEventHandlers(child);
+						});
+					}
+				});
+			}
+		});
 	});
 
+	observer.observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
+
+	document.querySelectorAll('[data-adt-ajax-select]').forEach(function(el) {
+		applyEventHandlers(el);
+	});
 }
 
 export default { run }
