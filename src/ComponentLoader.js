@@ -83,8 +83,13 @@ const initAjaxSelect = () => {
 const initInputClear = () => {
 	init('input-clear', 'InputClear');
 };
+
 const initMap = () => {
 	init('map', 'Map');
+};
+
+const initReplicator = () => {
+	init('replicator', 'Replicator');
 };
 
 const getFirstDiffCharIndex = (a, b) => {
@@ -118,5 +123,6 @@ export default {
 	initAjaxSelect,
 	initInputClear,
 	initMap,
+	initReplicator,
 	loadScssModule,
 };
