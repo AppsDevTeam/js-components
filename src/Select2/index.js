@@ -6,7 +6,7 @@ import 'select2/dist/js/i18n/cs'
 function run(options) {
 	function applyEventHandlers(el) {
 		$(el)
-			.select2($.extend({theme: 'bootstrap-5', language: "en"}, $(this).data('adt-select2') || {}))
+			.select2($.extend({theme: 'bootstrap-5', language: "en"}, $(el).data('adt-select2') || {}))
 			.on('change', function(e) {
 				Nette.toggleForm($(e.currentTarget).closest('form')[0], e.currentTarget);
 			});
