@@ -4,7 +4,7 @@ import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
 import 'select2/dist/js/i18n/cs'
 
 function run(options) {
-	const selector = options.selector || 'select';
+	const selector = options.selector || 'select:not(.select-default)';
 
 	function applyEventHandlers(el) {
 		$(el)
