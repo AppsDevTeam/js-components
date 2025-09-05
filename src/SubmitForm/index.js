@@ -32,6 +32,23 @@ function run(options) {
 	}
 
 	$.nette.ext('live').after(function($el) {
+		window.addEventListener('pageshow', (e) => {
+			if (e.persisted) {
+				$el.find('[data-adt-submit-form]').each(function(e) {
+					$(this).find('button').each(function () {
+						if ($(this).data('originalContent')) {
+							$(this).html($(this).data('originalContent'));
+						}
+					});
+					if ($(this).data('enabledButtons')) {
+						$(this).data('enabledButtons').each(function () {
+							$(this).prop('disabled', false);
+						});
+					}
+				});
+			}
+		});
+
 		$el.find('[data-adt-submit-form]').each(function(e) {
 			const observer = new MutationObserver(function(mutationsList, observer) {
 				mutationsList.forEach(function(mutation) {
@@ -52,7 +69,7 @@ function run(options) {
 	if (typeof Nette !== "undefined") {
 		Nette.showFormErrors = function(form, errors) {
 			// remove previously displayed error messages
-				form.querySelectorAll('[id$="-errors"]').forEach(el => {
+			form.querySelectorAll('[id$="-errors"]').forEach(el => {
 				el.innerHTML = '';
 			});
 
