@@ -22,7 +22,7 @@ const init = (selector, path) => {
 					loadedComponents.push(path);
 
 					if (path.startsWith('~')) {
-						import('~/' + path.slice(1) + '/index.js').then(component => {
+						import('~/src/' + path.slice(1) + '/index.js').then(component => {
 							component.default.run(componentsConfig[selector] || {});
 						});
 
