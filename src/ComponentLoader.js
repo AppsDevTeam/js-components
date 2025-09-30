@@ -21,7 +21,12 @@ const init = (selector, path) => {
 				if (target) {
 					loadedComponents.push(path);
 
-					if (path.includes('/')) {
+					if (path.startsWith('~')) {
+						import('~/' + path.slice(1) + '/index.js').then(component => {
+							component.default.run(componentsConfig[selector] || {});
+						});
+
+					} else if (path.includes('/')) {
 						import('JsComponents/' + path + '/index.js').then(component => {
 							component.default.run(componentsConfig[selector] || {});
 						});
