@@ -73,10 +73,16 @@ function run(options) {
 				el.innerHTML = '';
 			});
 
+			const alertErrors = [];
 			for (const error of errors) {
 				// because radio lists and checkbox lists contains one error message multiple times
-				if (!document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML.includes(error.message)) {
-					document.getElementById('snippet-' + getErrorElementId(error.element) + '-errors').innerHTML += '<div>' + error.message + '</div>';
+				const errorElementId = 'snippet-' + getErrorElementId(error.element) + '-errors';
+				const errorElement = document.getElementById(errorElementId);
+				if (!errorElement) {
+					alertErrors.push(error.message);
+					console.warn(`Element with ID "${errorElementId}" no exist.`);
+				} else if (!errorElement.innerHTML.includes(error.message)) {
+					errorElement.innerHTML += `<div>${error.message}</div>`;
 				}
 
 				error.element.classList.add('is-invalid');
@@ -92,6 +98,10 @@ function run(options) {
 
 			if (errors.length) {
 				scrollToFirstError(form);
+			}
+
+			if (alertErrors.length) {
+				alert(alertErrors.join('\n'));
 			}
 		};
 	} else {
