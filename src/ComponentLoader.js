@@ -69,6 +69,10 @@ const initRecaptcha = () => {
 	init('recaptcha', 'Recaptcha');
 };
 
+const initRedrawSnippet = () => {
+	init('redraw-snippet', 'RedrawSnippet');
+};
+
 const initSelect2 = () => {
 	init('select2', 'Select2');
 };
@@ -122,6 +126,7 @@ export default {
 	initGLightbox,
 	initGoogleMaps,
 	initRecaptcha,
+	initRedrawSnippet,
 	initSelect2,
 	initSubmitForm,
 	initTinyMCE,
