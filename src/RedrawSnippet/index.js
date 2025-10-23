@@ -4,12 +4,13 @@ async function run(options) {
 		if ($el.is('button, input[type="button"], input[type="submit"]')) {
 			$el.on('click', sendNetteAjax);
 		} else if ($el.is('input:not([type="button"]):not([type="submit"]), select, textarea')) {
-			$el.on('change', sendNetteAjax);
+			$el.on('input', sendNetteAjax);
 		}
 	}
 
 	function sendNetteAjax(e) {
-		$(document).find('[name="' + $(e.currentTarget).attr('data-adt-redraw-snippet') + '"]').netteAjax(e);
+		const $el = $(e.currentTarget);
+		$el.closest('form').find('[name="' + $el.attr('data-adt-redraw-snippet') + '"]').netteAjax(e);
 	}
 
 	const observer = new MutationObserver(mutations => {
