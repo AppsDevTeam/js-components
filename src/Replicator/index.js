@@ -2,7 +2,7 @@ async function run(options) {
 	function applyEventHandlers(el) {
 		$(el).formReplicator({
 			template: $.parseHTML($(el).attr('data-adt-replicator')),
-			addStaticButton: $(el).find('[data-adt-replicator-add]'),
+			addStaticButton: $(el).find('[data-adt-replicator-add]').not($(el).find('[data-adt-replicator] [data-adt-replicator-add]')),
 			addStaticButtonShowAlways: true,
 		});
 	}
