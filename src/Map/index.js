@@ -1,9 +1,9 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import {RouteSetting, defaultRouteSettings} from './route.types.js';
 
 let siteKey;
 let markerImg;
@@ -14,7 +14,12 @@ async function run(options) {
 	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
-		const { position = [], zoom, hideControl = false, markers = [], callback } = JSON.parse(el.dataset.adtMap);
+		const { position = [], zoom, hideControl = false, markers = [], route = {}, callback } = JSON.parse(el.dataset.adtMap);
+		/** @type {RouteSetting} */
+		const routeSettings = {
+			...defaultRouteSettings,
+			...route,
+		};
 
 		if (mapInstances.has(el)) {
 			mapInstances.get(el).remove();
@@ -76,6 +81,10 @@ async function run(options) {
 					createMarker({id: 0, position: position}, markerOptions).addTo(map);
 				}
 			};
+		}
+
+		if (routeSettings.enabled) {
+			calculateRoute(map, markers, routeSettings)
 		}
 
 		if (callback) {
@@ -161,6 +170,35 @@ function createMarker(marker, options, cluster = null) {
 		cluster.addLayer(mapMarker);
 	}
 	return mapMarker;
+}
+
+async function calculateRoute(map, markers, routeSettings) {
+	if (markers.length < 2) return;
+
+	const waypoints = markers.map(m => `${m.position['lon']},${m.position['lat']}`).join('|');
+
+	const response = await fetch(
+		`https://api.mapy.cz/v1/routing/route?` + new URLSearchParams({
+			start: waypoints.split('|')[0],
+			end: waypoints.split('|')[waypoints.split('|').length - 1],
+			routeType: routeSettings.routeType,
+			waypoints: waypoints.split('|').slice(1, -1).join('|'),
+			apikey: siteKey,
+		})
+	);
+
+	const data = await response.json();
+
+	if (data.geometry?.geometry?.coordinates) {
+		const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
+		const polyline = L.polyline(coords, {
+			color: routeSettings.color,
+			weight: routeSettings.weight,
+			opacity: routeSettings.opacity
+		}).addTo(map);
+
+		map.fitBounds(polyline.getBounds());
+	}
 }
 
 export default { run }
