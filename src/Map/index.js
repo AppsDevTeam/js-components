@@ -14,7 +14,15 @@ async function run(options) {
 	markerImg = options.markerImg;
 
 	function applyEventHandlers(el) {
-		const { position = [], zoom, hideControl = false, markers = [], route = {}, callback } = JSON.parse(el.dataset.adtMap);
+		const {
+			position = [],
+			zoom,
+			hideControl = false,
+			markers = [],
+			route = {},
+			showDefaultMarker = true,
+			callback
+		} = JSON.parse(el.dataset.adtMap);
 		/** @type {RouteSetting} */
 		const routeSettings = {
 			...defaultRouteSettings,
@@ -77,7 +85,7 @@ async function run(options) {
 				});
 				if (markers.length) {
 					addMarkers(map, markers, markerOptions, position);
-				} else {
+				} else if (showDefaultMarker) {
 					createMarker({id: 0, position: position}, markerOptions).addTo(map);
 				}
 			};
