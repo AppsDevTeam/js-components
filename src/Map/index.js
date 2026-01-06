@@ -8,6 +8,9 @@ import {RouteSetting, defaultRouteSettings} from './route.types.js';
 let siteKey;
 let markerImg;
 const mapInstances = new WeakMap();
+const selectedMarkers = new WeakMap();
+const selectionOrder = new WeakMap();
+const markerInstances = new WeakMap();
 
 async function run(options) {
 	siteKey = options.siteKey;
@@ -21,8 +24,14 @@ async function run(options) {
 			markers = [],
 			route = {},
 			showDefaultMarker = true,
-			callback
+			callback,
+			selectable = false,
+			onSelectionChange = null,
+			customMarkers = {},
+			showSelectionOrder = false,
+			markerInfoCallback = null,
 		} = JSON.parse(el.dataset.adtMap);
+
 		/** @type {RouteSetting} */
 		const routeSettings = {
 			...defaultRouteSettings,
@@ -36,12 +45,16 @@ async function run(options) {
 
 		const map = L.map(el);
 		mapInstances.set(el, map);
+		selectedMarkers.set(map, new Set());
+		selectionOrder.set(map, new Map());
+		markerInstances.set(map, new Map());
 
 		L.tileLayer("https://api.mapy.cz/v1/maptiles/basic/256/{z}/{x}/{y}?apikey=" + siteKey, {
 			minZoom: 0,
 			maxZoom: 19,
 			attribution: '<a href="https://api.mapy.cz/copyright" target="_blank">&copy; Seznam.cz a.s. a další</a>',
 		}).addTo(map);
+
 		const LogoControl = L.Control.extend({
 			options: {
 				position: 'bottomleft',
@@ -73,20 +86,50 @@ async function run(options) {
 			map.dragging.disable();
 		}
 
+		if (selectable) {
+			enableRectangleSelection(map, onSelectionChange, showSelectionOrder);
+		}
+
 		const markerOptions = {};
-		if (markerImg) {
+		const customMarkerOptions = {};
+
+		const normalImg = customMarkers.normal || markerImg;
+		const selectedImg = customMarkers.selected || markerImg;
+
+		if (normalImg) {
 			const img = new Image();
-			img.src = markerImg;
+			img.src = normalImg;
 			img.onload = function () {
 				markerOptions.icon = L.icon({
-					iconUrl: markerImg,
+					iconUrl: normalImg,
 					iconSize: [img.width, img.height],
 					iconAnchor: [img.width / 2, img.height]
 				});
-				if (markers.length) {
-					addMarkers(map, markers, markerOptions, position);
-				} else if (showDefaultMarker) {
-					createMarker({id: 0, position: position}, markerOptions).addTo(map);
+
+				if (selectedImg && selectedImg !== normalImg) {
+					const selectedImgEl = new Image();
+					selectedImgEl.src = selectedImg;
+					selectedImgEl.onload = function () {
+						customMarkerOptions.icon = L.icon({
+							iconUrl: selectedImg,
+							iconSize: [selectedImgEl.width, selectedImgEl.height],
+							iconAnchor: [selectedImgEl.width / 2, selectedImgEl.height]
+						});
+
+						if (markers.length) {
+							addMarkers(map, markers, markerOptions, customMarkerOptions, position, selectable, onSelectionChange, showSelectionOrder, markerInfoCallback);
+						} else if (showDefaultMarker) {
+							createMarker({id: 0, position: position}, markerOptions, customMarkerOptions, null, selectable, onSelectionChange, map, showSelectionOrder, markerInfoCallback).addTo(map);
+						}
+					};
+				} else {
+					customMarkerOptions.icon = markerOptions.icon;
+
+					if (markers.length) {
+						addMarkers(map, markers, markerOptions, customMarkerOptions, position, selectable, onSelectionChange, showSelectionOrder, markerInfoCallback);
+					} else if (showDefaultMarker) {
+						createMarker({id: 0, position: position}, markerOptions, customMarkerOptions, null, selectable, onSelectionChange, map, showSelectionOrder, markerInfoCallback).addTo(map);
+					}
 				}
 			};
 		}
@@ -131,11 +174,79 @@ async function run(options) {
 	});
 }
 
-function addMarkers(map, markers, options, position) {
+function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
+	let isDrawing = false;
+	let startPoint = null;
+	let rectangle = null;
+
+	map.on('mousedown', (e) => {
+		if (e.originalEvent.ctrlKey && e.originalEvent.shiftKey) {
+			isDrawing = true;
+			startPoint = e.latlng;
+
+			rectangle = L.rectangle([startPoint, startPoint], {
+				color: '#3388ff',
+				weight: 2,
+				fillOpacity: 0.1
+			}).addTo(map);
+
+			map.dragging.disable();
+			e.originalEvent.preventDefault();
+		}
+	});
+
+	map.on('mousemove', (e) => {
+		if (isDrawing && rectangle) {
+			rectangle.setBounds([startPoint, e.latlng]);
+		}
+	});
+
+	map.on('mouseup', (e) => {
+		if (isDrawing) {
+			isDrawing = false;
+			map.dragging.enable();
+
+			if (rectangle) {
+				const bounds = rectangle.getBounds();
+				const markers = markerInstances.get(map);
+
+				const selectedInArea = [];
+				markers.forEach((markerInstance, markerId) => {
+					if (bounds.contains(markerInstance.getLatLng())) {
+						selectedInArea.push(markerInstance);
+					}
+				});
+
+				const selected = selectedMarkers.get(map);
+				selectedInArea.forEach(marker => {
+					if (selected.has(marker.options.id)) {
+						deselectMarker(marker, map, showSelectionOrder);
+					} else {
+						selectMarker(marker, map, showSelectionOrder);
+					}
+				});
+
+				map.removeLayer(rectangle);
+				rectangle = null;
+
+				if (onSelectionChange && window[onSelectionChange]) {
+					const order = selectionOrder.get(map);
+					const orderedIds = Array.from(order.entries())
+						.sort((a, b) => a[1] - b[1])
+						.map(entry => entry[0]);
+					window[onSelectionChange](orderedIds);
+				}
+			}
+		}
+	});
+}
+
+function addMarkers(map, markers, options, selectedOptions, position, selectable, onSelectionChange, showSelectionOrder, markerInfoCallback) {
 	const positionsOfMarkers = [];
 	const cluster = L.markerClusterGroup({
 		disableClusteringAtZoom: map.getMaxZoom(),
 	});
+
 	for (const marker of markers) {
 		if (marker.img) {
 			let markerOptions = options;
@@ -147,10 +258,10 @@ function addMarkers(map, markers, options, position) {
 					iconSize: [markerImage.width, markerImage.height],
 					iconAnchor: [markerImage.width / 2, markerImage.height]
 				});
-				createMarker(marker, markerOptions, cluster);
+				createMarker(marker, markerOptions, selectedOptions, cluster, selectable, onSelectionChange, map, showSelectionOrder, markerInfoCallback);
 			};
 		} else {
-			createMarker(marker, options, cluster);
+			createMarker(marker, options, selectedOptions, cluster, selectable, onSelectionChange, map, showSelectionOrder, markerInfoCallback);
 		}
 
 		if (!marker.excludeFromBoundary) {
@@ -158,32 +269,226 @@ function addMarkers(map, markers, options, position) {
 		}
 	}
 
-	if (!position.length) {
+	if (!position.length && positionsOfMarkers.length) {
 		map.fitBounds(positionsOfMarkers);
 	}
 	map.addLayer(cluster);
 }
 
-function createMarker(marker, options, cluster = null) {
+function createMarker(marker, options, selectedOptions, cluster = null, selectable = false, onSelectionChange = null, map = null, showSelectionOrder = false, markerInfoCallback = null) {
 	const mapMarker = L.marker(marker.position, {...options, id: marker.id});
-	if (marker.callback) {
-		mapMarker.on('click', window[marker.callback]);
+
+	mapMarker._normalIcon = options.icon;
+	mapMarker._selectedIcon = selectedOptions.icon;
+	mapMarker._markerData = marker;
+
+	if (map) {
+		const markers = markerInstances.get(map);
+		markers.set(marker.id, mapMarker);
 	}
+
+	const originalCallback = marker.callback;
+
+	if (selectable && map) {
+		mapMarker.on('click', function(e) {
+			if (e.originalEvent.shiftKey && markerInfoCallback && window[markerInfoCallback]) {
+				window[markerInfoCallback](marker);
+				L.DomEvent.stopPropagation(e);
+				return;
+			}
+
+			const selected = selectedMarkers.get(map);
+
+			if (selected.has(marker.id)) {
+				deselectMarker(mapMarker, map, showSelectionOrder);
+			} else {
+				selectMarker(mapMarker, map, showSelectionOrder);
+			}
+
+			if (onSelectionChange && window[onSelectionChange]) {
+				const order = selectionOrder.get(map);
+				const orderedIds = Array.from(order.entries())
+					.sort((a, b) => a[1] - b[1])
+					.map(entry => entry[0]);
+				window[onSelectionChange](orderedIds);
+			}
+
+			if (originalCallback && window[originalCallback]) {
+				window[originalCallback](e);
+			}
+
+			L.DomEvent.stopPropagation(e);
+		});
+	} else if (originalCallback) {
+		mapMarker.on('click', window[originalCallback]);
+	}
+
 	if (marker.popup) {
 		mapMarker.bindPopup(marker.popup);
 	} else if (marker.popupCallback) {
 		mapMarker.bindPopup(() => window[marker.popupCallback](mapMarker));
 	}
+
 	if (cluster) {
 		cluster.addLayer(mapMarker);
 	}
+
 	return mapMarker;
 }
 
-async function calculateRoute(map, markers, routeSettings) {
-	if (markers.length < 2) return;
+function selectMarker(marker, map, showSelectionOrder) {
+	const selected = selectedMarkers.get(map);
+	const order = selectionOrder.get(map);
 
-	const waypoints = markers.map(m => `${m.position['lon']},${m.position['lat']}`).join('|');
+	selected.add(marker.options.id);
+
+	const maxOrder = order.size > 0 ? Math.max(...order.values()) : 0;
+	const newOrder = maxOrder + 1;
+	order.set(marker.options.id, newOrder);
+
+	if (showSelectionOrder) {
+		updateMarkerOrderDisplay(marker, newOrder, true);
+	} else if (marker._selectedIcon) {
+		marker.setIcon(marker._selectedIcon);
+	}
+
+	const icon = marker.getElement();
+	if (icon) {
+		icon.classList.add('marker-selected');
+	}
+
+	if (showSelectionOrder) {
+		updateSelectionOrderLabel(marker, newOrder);
+	}
+}
+
+function deselectMarker(marker, map, showSelectionOrder) {
+	const selected = selectedMarkers.get(map);
+	const order = selectionOrder.get(map);
+	const removedOrder = order.get(marker.options.id);
+
+	selected.delete(marker.options.id);
+	order.delete(marker.options.id);
+
+	order.forEach((value, key) => {
+		if (value > removedOrder) {
+			order.set(key, value - 1);
+		}
+	});
+
+	if (showSelectionOrder) {
+		updateMarkerOrderDisplay(marker, null, false);
+	} else if (marker._normalIcon) {
+		marker.setIcon(marker._normalIcon);
+	}
+
+	const icon = marker.getElement();
+	if (icon) {
+		icon.classList.remove('marker-selected');
+	}
+
+	if (showSelectionOrder) {
+		removeSelectionOrderLabel(marker);
+
+		const markers = markerInstances.get(map);
+		markers.forEach((markerInstance) => {
+			const newOrder = order.get(markerInstance.options.id);
+			if (newOrder) {
+				updateSelectionOrderLabel(markerInstance, newOrder);
+				updateMarkerOrderDisplay(markerInstance, newOrder, true);
+			}
+		});
+	}
+}
+
+function updateSelectionOrderLabel(marker, orderNumber) {
+	const icon = marker.getElement();
+	if (!icon) return;
+
+	let label = icon.querySelector('.selection-order-label');
+	if (!label) {
+		label = document.createElement('div');
+		label.className = 'selection-order-label';
+		label.style.cssText = `
+			position: absolute;
+			top: -10px;
+			right: -10px;
+			background: #3388ff;
+			color: white;
+			border-radius: 50%;
+			width: 20px;
+			height: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 12px;
+			font-weight: bold;
+			border: 2px solid white;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+			z-index: 1000;
+			pointer-events: none;
+		`;
+		icon.style.position = 'relative';
+		icon.appendChild(label);
+	}
+
+	label.textContent = orderNumber;
+}
+
+function removeSelectionOrderLabel(marker) {
+	const icon = marker.getElement();
+	if (!icon) return;
+
+	const label = icon.querySelector('.selection-order-label');
+	if (label) {
+		label.remove();
+	}
+}
+
+function updateMarkerOrderDisplay(marker, orderNumber, isSelected) {
+	if (!marker._normalIcon || !marker._normalIcon.options) return;
+
+	const iconUrl = isSelected && marker._selectedIcon ?
+		marker._selectedIcon.options.iconUrl :
+		marker._normalIcon.options.iconUrl;
+
+	const iconSize = marker._normalIcon.options.iconSize || [43, 58];
+	const iconAnchor = marker._normalIcon.options.iconAnchor || [iconSize[0] / 2, iconSize[1]];
+	const newIcon = L.divIcon({
+		className: 'marker-wrapper',
+		html: `
+			<div class="marker-icon">
+				<img src="${iconUrl}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px;" />
+				${orderNumber ? `<span class="marker-text">${orderNumber}</span>` : ''}
+			</div>
+		`,
+		iconSize: iconSize,
+		iconAnchor: iconAnchor
+	});
+
+	marker.setIcon(newIcon);
+}
+
+async function calculateRoute(map, markers, routeSettings) {
+	const selectedSet = selectedMarkers.get(map);
+	const order = selectionOrder.get(map);
+	let routeMarkers = markers;
+
+	if (selectedSet && selectedSet.size > 0) {
+		const orderedIds = Array.from(order.entries())
+			.sort((a, b) => a[1] - b[1])
+			.map(entry => entry[0]);
+
+		routeMarkers = orderedIds
+			.map(id => markers.find(m => m.id === id))
+			.filter(m => m !== undefined);
+	}
+
+	if (routeMarkers.length < 2) {
+		return;
+	}
+
+	const waypoints = routeMarkers.map(m => `${m.position['lon']},${m.position['lat']}`).join('|');
 
 	const response = await fetch(
 		`https://api.mapy.cz/v1/routing/route?` + new URLSearchParams({
@@ -209,4 +514,36 @@ async function calculateRoute(map, markers, routeSettings) {
 	}
 }
 
-export default { run }
+function getSelectedMarkers(mapElement) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return [];
+
+	const order = selectionOrder.get(map);
+	return Array.from(order.entries())
+		.sort((a, b) => a[1] - b[1])
+		.map(entry => entry[0]);
+}
+
+function clearSelection(mapElement) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+
+	const selected = selectedMarkers.get(map);
+	const order = selectionOrder.get(map);
+	const markers = markerInstances.get(map);
+
+	markers.forEach((markerInstance) => {
+		if (selected.has(markerInstance.options.id)) {
+			deselectMarker(markerInstance, map, true);
+		}
+	});
+
+	selected.clear();
+	order.clear();
+}
+
+export default {
+	run,
+	getSelectedMarkers,
+	clearSelection
+}
