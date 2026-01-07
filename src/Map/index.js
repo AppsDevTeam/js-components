@@ -478,7 +478,6 @@ function deselectMarker(marker, map, showSelectionOrder) {
 			const newOrder = order.get(markerInstance.options.id);
 			if (newOrder) {
 				updateMarkerOrderDisplay(markerInstance, newOrder, true);
-				// updateSelectionOrderLabel(markerInstance, newOrder);
 			}
 		});
 	}
@@ -637,6 +636,7 @@ function toggleMarker(mapElement, markerId, selected) {
 	const map = mapInstances.get(mapElement);
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
+
 	if (!marker) return;
 
 	const selectedSet = selectedMarkers.get(map);
@@ -661,10 +661,21 @@ function toggleMarker(mapElement, markerId, selected) {
 	}
 }
 
+function setOrder(mapElement, markerId, orderNumber) {
+	const map = mapInstances.get(mapElement);
+	const markers = markerInstances.get(map);
+	const marker = markers?.get(markerId);
+	const settings = routeSettingsMap.get(map);
+
+	if (!marker) return;
+
+	updateMarkerOrderDisplay(marker, orderNumber, true);
+}
 
 export default {
 	run,
 	getSelectedMarkers,
 	clearSelection,
-	toggleMarker
+	toggleMarker,
+	setOrder,
 }
