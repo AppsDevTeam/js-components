@@ -168,8 +168,15 @@ async function run(options) {
 		mutations.forEach(mutation => {
 			if (mutation.type === "childList") {
 				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1 && node.hasAttribute("data-adt-map")) {
-						applyEventHandlers(node);
+					if (node.nodeType === 1) {
+						// Zkontroluj samotný node
+						if (node.hasAttribute("data-adt-map")) {
+							applyEventHandlers(node);
+						}
+						// Zkontroluj všechny potomky
+						node.querySelectorAll?.('[data-adt-map]').forEach(el => {
+							applyEventHandlers(el);
+						});
 					}
 				});
 			}
@@ -408,7 +415,7 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 	return mapMarker;
 }
 
-async function selectMarker(marker, map, showSelectionOrder) {
+function selectMarker(marker, map, showSelectionOrder) {
 	const selected = selectedMarkers.get(map);
 	const order = selectionOrder.get(map);
 
@@ -428,9 +435,24 @@ async function selectMarker(marker, map, showSelectionOrder) {
 	}
 
 	if (showSelectionOrder) {
-		const newIcon = await createMarkerIcon(map, marker.options.icon.options.iconUrl, newOrder)
-		marker.setIcon(newIcon);
+		updateSelectionOrderLabel(marker, newOrder);
 	}
+}
+
+function updateSelectionOrderLabel(marker, orderNumber) {
+	marker.setIcon(
+		L.divIcon({
+			className: 'marker-icon-wrapper',
+			html: `
+				<div class="marker-icon">
+					<img src="` + marker.options.icon.options.iconUrl + `" />
+					<div class="selection-order-label">${orderNumber}</div>
+				</div>
+			`,
+			iconSize: [43, 58],
+			iconAnchor: [21, 58]
+		})
+	);
 }
 
 function deselectMarker(marker, map, showSelectionOrder) {
@@ -447,7 +469,7 @@ function deselectMarker(marker, map, showSelectionOrder) {
 	});
 
 	if (showSelectionOrder) {
-		updateMarkerOrderDisplay(map, marker, null, false);
+		updateMarkerOrderDisplay(marker, null, false);
 	} else if (marker._normalIcon) {
 		marker.setIcon(marker._normalIcon);
 	}
@@ -462,45 +484,36 @@ function deselectMarker(marker, map, showSelectionOrder) {
 		markers.forEach((markerInstance) => {
 			const newOrder = order.get(markerInstance.options.id);
 			if (newOrder) {
-				updateMarkerOrderDisplay(map, markerInstance, newOrder, true);
+				updateMarkerOrderDisplay(markerInstance, newOrder, true);
 			}
 		});
 	}
 }
 
 
-async function updateMarkerOrderDisplay(map, marker, orderNumber, isSelected, color = null) {
+function updateMarkerOrderDisplay(marker, orderNumber, isSelected) {
 	if (!marker._normalIcon || !marker._normalIcon.options) return;
 
 	const iconUrl = isSelected && marker._selectedIcon ?
 		marker._selectedIcon.options.iconUrl :
 		marker._normalIcon.options.iconUrl;
-	const newIcon = await createMarkerIcon(map, iconUrl, orderNumber, color);
 
-	marker.setIcon(newIcon);
-}
-
-async function createMarkerIcon(map, iconUrl, orderNumber, color = null) {
-	let inlineStyle = null;
-	const response = await fetch(iconUrl);
-	const svg = await response.text();
-	const settings = routeSettingsMap.get(map);
-
-	if ((settings && settings.enabled) || color) {
-		inlineStyle = `--marker-fill: ${color ?? settings.color};`;
-	}
-
-	return L.divIcon({
-		className: 'marker-icon-wrapper',
+	const iconSize = marker._normalIcon.options.iconSize || [43, 58];
+	const iconAnchor = marker._normalIcon.options.iconAnchor || [iconSize[0] / 2, iconSize[1]];
+	const newIcon = L.divIcon({
+		className: 'marker-wrapper',
 		html: `
-			<div class="marker-icon" style="${inlineStyle}">
-				${svg}
+			<div class="marker-icon">
+				<img src="${iconUrl}" style="width: ${iconSize[0]}px; height: ${iconSize[1]}px;" />
 				${orderNumber ? `<span class="selection-order-label">${orderNumber}</span>` : ''}
 			</div>
 		`,
-		iconSize: [43, 58],
-		iconAnchor: [21, 58]
+		iconSize: iconSize,
+		iconAnchor: iconAnchor
 	});
+
+	marker.setIcon(newIcon);
+	// updateSelectionOrderLabel(marker, orderNumber);
 }
 
 function applyPreselectedMarkers(map, markersData, showSelectionOrder, onSelectionChange) {
@@ -656,19 +669,14 @@ function toggleMarker(mapElement, markerId, selected) {
 }
 
 function setOrder(mapElement, markerId, orderNumber) {
-	let color = null;
 	const map = mapInstances.get(mapElement);
-	const settings = $(mapElement).data('adt-map')
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
-
-	if (settings && settings.route && settings.route.enabled) {
-		color = settings.route.color;
-	}
+	const settings = routeSettingsMap.get(map);
 
 	if (!marker) return;
 
-	updateMarkerOrderDisplay(mapElement, marker, orderNumber, true, color);
+	updateMarkerOrderDisplay(marker, orderNumber, true);
 }
 
 export default {
