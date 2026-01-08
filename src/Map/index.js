@@ -168,8 +168,15 @@ async function run(options) {
 		mutations.forEach(mutation => {
 			if (mutation.type === "childList") {
 				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1 && node.hasAttribute("data-adt-map")) {
-						applyEventHandlers(node);
+					if (node.nodeType === 1) {
+						// Zkontroluj samotný node
+						if (node.hasAttribute("data-adt-map")) {
+							applyEventHandlers(node);
+						}
+						// Zkontroluj všechny potomky
+						node.querySelectorAll?.('[data-adt-map]').forEach(el => {
+							applyEventHandlers(el);
+						});
 					}
 				});
 			}
