@@ -570,19 +570,21 @@ async function calculateRoute(map) {
 			return;
 		}
 
-		const waypoints = routeMarkers.map(m => `${m.position['lon']},${m.position['lat']}`).join('|');
+		const params = new URLSearchParams({
+			start: `${routeMarkers[0].position.lon},${routeMarkers[0].position.lat}`,
+			end: `${routeMarkers[routeMarkers.length-1].position.lon},${routeMarkers[routeMarkers.length-1].position.lat}`,
+			routeType: routeSettings.routeType,
+			apikey: siteKey
+		});
+
+		routeMarkers.slice(1, -1).forEach(m => {
+			params.append('waypoints', `${m.position.lon},${m.position.lat}`);
+		});
 
 		try {
 			const response = await fetch(
-				`https://api.mapy.cz/v1/routing/route?` + new URLSearchParams({
-					start: waypoints.split('|')[0],
-					end: waypoints.split('|')[waypoints.split('|').length - 1],
-					routeType: routeSettings.routeType,
-					waypoints: waypoints.split('|').slice(1, -1).join('|'),
-					apikey: siteKey,
-				})
+				`https://api.mapy.cz/v1/routing/route?${params.toString()}`
 			);
-
 			const data = await response.json();
 
 			if (data.geometry?.geometry?.coordinates) {
