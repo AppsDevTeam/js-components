@@ -356,9 +356,26 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 	mapMarker._selectedIcon = selectedOptions.icon;
 	mapMarker._markerData = marker;
 
+	const markerElement = mapMarker.getElement();
+	if (markerElement && markerElement.parentElement) {
+		markerElement.parentElement.style.pointerEvents = 'visible';
+	}
+
 	if (map) {
 		const markers = markerInstances.get(map);
 		markers.set(marker.id, mapMarker);
+
+		mapMarker.on('add', function() {
+			const el = mapMarker.getElement();
+			if (el) {
+				el.style.cursor = 'pointer';
+
+				const parent = el.parentElement;
+				if (parent) {
+					parent.style.pointerEvents = 'all';
+				}
+			}
+		});
 	}
 
 	const originalCallback = marker.callback;
