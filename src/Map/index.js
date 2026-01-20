@@ -17,6 +17,11 @@ const markersDataMap = new WeakMap();
 const markerClusters = new WeakMap();
 const onSelectionChangeMap = new WeakMap();
 
+const DEPOT_TYPE = {
+	START: 'depot-start',
+	END: 'depot-end'
+};
+
 async function run(options) {
 	siteKey = options.siteKey;
 	markerImg = options.markerImg;
@@ -41,6 +46,7 @@ async function run(options) {
 		const routeSettings = {
 			...defaultRouteSettings,
 			...route,
+			customMarkers: customMarkers,
 		};
 
 		if (mapInstances.has(el)) {
@@ -587,14 +593,33 @@ async function calculateRoute(map) {
 			return;
 		}
 
+		let startPoint = routeMarkers[0].position;
+		const hasCustomStart = routeSettings.startPoint !== null && routeSettings.startPoint !== undefined;
+		if (hasCustomStart) {
+			startPoint = routeSettings.startPoint;
+		}
+
+		let endPoint = routeMarkers[routeMarkers.length - 1].position;
+		const hasCustomEnd = routeSettings.endPoint !== null && routeSettings.endPoint !== undefined;
+		if (hasCustomEnd) {
+			endPoint = routeSettings.endPoint;
+		}
+
+		if (hasCustomStart) {
+			addDepotMarker(map, startPoint, DEPOT_TYPE.START);
+		}
+		if (hasCustomEnd) {
+			addDepotMarker(map, endPoint, DEPOT_TYPE.END);
+		}
+
 		const params = new URLSearchParams({
-			start: `${routeMarkers[0].position.lon},${routeMarkers[0].position.lat}`,
-			end: `${routeMarkers[routeMarkers.length-1].position.lon},${routeMarkers[routeMarkers.length-1].position.lat}`,
+			start: `${startPoint.lon},${startPoint.lat}`,
+			end: `${endPoint.lon},${endPoint.lat}`,
 			routeType: routeSettings.routeType,
 			apikey: siteKey
 		});
 
-		routeMarkers.slice(1, -1).forEach(m => {
+		routeMarkers.forEach(m => {
 			params.append('waypoints', `${m.position.lon},${m.position.lat}`);
 		});
 
@@ -618,6 +643,24 @@ async function calculateRoute(map) {
 			console.error('Error calculating route:', error);
 		}
 	}
+}
+
+function addDepotMarker(map, position, depotType) {
+	const routeSettings = routeSettingsMap.get(map);
+	const customMarkers = routeSettings.customMarkers || {};
+	const iconUrl = customMarkers.depot || markerImg;
+
+	const img = new Image();
+	img.src = iconUrl;
+	img.onload = function () {
+		const icon = L.icon({
+			iconUrl: iconUrl,
+			iconSize: [img.width, img.height],
+			iconAnchor: [img.width / 2, img.height]
+		});
+
+		L.marker(position, { icon: icon }).addTo(map);
+	};
 }
 
 function getSelectedMarkers(mapElement) {
