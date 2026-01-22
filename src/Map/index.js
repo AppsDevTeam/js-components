@@ -581,6 +581,16 @@ async function calculateRoute(map) {
 		return;
 	}
 
+	const hasCustomStart = routeSettings.startPoint !== null && routeSettings.startPoint !== undefined;
+	const hasCustomEnd = routeSettings.endPoint !== null && routeSettings.endPoint !== undefined;
+
+	if (hasCustomStart) {
+		addDepotMarker(map, routeSettings.startPoint, DEPOT_TYPE.START);
+	}
+	if (hasCustomEnd) {
+		addDepotMarker(map, routeSettings.endPoint, DEPOT_TYPE.END);
+	}
+
 	if (selectedSet && selectedSet.size > 0) {
 		const orderedIds = Array.from(order.entries())
 			.sort((a, b) => a[1] - b[1])
@@ -594,53 +604,108 @@ async function calculateRoute(map) {
 		}
 
 		let startPoint = routeMarkers[0].position;
-		const hasCustomStart = routeSettings.startPoint !== null && routeSettings.startPoint !== undefined;
 		if (hasCustomStart) {
 			startPoint = routeSettings.startPoint;
 		}
 
 		let endPoint = routeMarkers[routeMarkers.length - 1].position;
-		const hasCustomEnd = routeSettings.endPoint !== null && routeSettings.endPoint !== undefined;
 		if (hasCustomEnd) {
 			endPoint = routeSettings.endPoint;
 		}
 
-		if (hasCustomStart) {
-			addDepotMarker(map, startPoint, DEPOT_TYPE.START);
-		}
-		if (hasCustomEnd) {
-			addDepotMarker(map, endPoint, DEPOT_TYPE.END);
-		}
+		// API mapy.cz povoluje max 15 waypointů, viz https://developer.mapy.com/cs/rest-api/funkce/planovani/
+		const WAYPOINTS_LIMIT = 15;
+		const allCoords = [];
 
-		const params = new URLSearchParams({
-			start: `${startPoint.lon},${startPoint.lat}`,
-			end: `${endPoint.lon},${endPoint.lat}`,
-			routeType: routeSettings.routeType,
-			apikey: siteKey
-		});
+		if (routeMarkers.length <= WAYPOINTS_LIMIT) {
+			// Pokud je markerů méně nebo rovno 15, použijeme původní logiku
+			const params = new URLSearchParams({
+				start: `${startPoint.lon},${startPoint.lat}`,
+				end: `${endPoint.lon},${endPoint.lat}`,
+				routeType: routeSettings.routeType,
+				apikey: siteKey
+			});
 
-		routeMarkers.forEach(m => {
-			params.append('waypoints', `${m.position.lon},${m.position.lat}`);
-		});
+			routeMarkers.forEach(m => {
+				params.append('waypoints', `${m.position.lon},${m.position.lat}`);
+			});
 
-		try {
-			const response = await fetch(
-				`https://api.mapy.cz/v1/routing/route?${params.toString()}`
-			);
-			const data = await response.json();
+			try {
+				const response = await fetch(
+					`https://api.mapy.cz/v1/routing/route?${params.toString()}`
+				);
+				const data = await response.json();
 
-			if (data.geometry?.geometry?.coordinates) {
-				const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
-				const polyline = L.polyline(coords, {
-					color: routeSettings.color,
-					weight: routeSettings.weight,
-					opacity: routeSettings.opacity
-				}).addTo(map);
-
-				routePolylines.set(map, polyline);
+				if (data.geometry?.geometry?.coordinates) {
+					const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
+					allCoords.push(...coords);
+				}
+			} catch (error) {
+				console.error('Error calculating route:', error);
+				return;
 			}
-		} catch (error) {
-			console.error('Error calculating route:', error);
+		} else {
+			const chunks = [];
+			for (let i = 0; i < routeMarkers.length; i += WAYPOINTS_LIMIT) {
+				chunks.push(routeMarkers.slice(i, i + WAYPOINTS_LIMIT));
+			}
+
+			for (let i = 0; i < chunks.length; i++) {
+				const chunk = chunks[i];
+				const isFirstChunk = i === 0;
+				const isLastChunk = i === chunks.length - 1;
+
+				let chunkStart, chunkEnd;
+
+				if (isFirstChunk) {
+					chunkStart = startPoint; // Použije custom start nebo první marker
+					chunkEnd = isLastChunk ? endPoint : chunk[chunk.length - 1].position;
+				} else if (isLastChunk) {
+					chunkStart = chunks[i - 1][chunks[i - 1].length - 1].position;
+					chunkEnd = endPoint; // Použije custom end nebo poslední marker
+				} else {
+					chunkStart = chunks[i - 1][chunks[i - 1].length - 1].position;
+					chunkEnd = chunk[chunk.length - 1].position;
+				}
+
+				const params = new URLSearchParams({
+					start: `${chunkStart.lon},${chunkStart.lat}`,
+					end: `${chunkEnd.lon},${chunkEnd.lat}`,
+					routeType: routeSettings.routeType,
+					apikey: siteKey
+				});
+
+				const markersToAdd = isFirstChunk ? chunk : chunk.slice(1);
+
+				markersToAdd.forEach(m => {
+					params.append('waypoints', `${m.position.lon},${m.position.lat}`);
+				});
+
+				try {
+					const response = await fetch(
+						`https://api.mapy.cz/v1/routing/route?${params.toString()}`
+					);
+					const data = await response.json();
+
+					if (data.geometry?.geometry?.coordinates) {
+						const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
+						allCoords.push(...coords);
+					}
+				} catch (error) {
+					console.error(`Error calculating route chunk ${i + 1}:`, error);
+					return;
+				}
+			}
+		}
+
+		if (allCoords.length > 0) {
+			const polyline = L.polyline(allCoords, {
+				color: routeSettings.color,
+				weight: routeSettings.weight,
+				opacity: routeSettings.opacity
+			}).addTo(map);
+
+			routePolylines.set(map, polyline);
 		}
 	}
 }
