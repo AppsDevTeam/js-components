@@ -7,6 +7,7 @@ import {RouteSetting, defaultRouteSettings} from './route.types.js';
 
 let siteKey;
 let markerImg;
+const svgCache = new Map();
 const mapInstances = new WeakMap();
 const selectedMarkers = new WeakMap();
 const selectionOrder = new WeakMap();
@@ -16,6 +17,8 @@ const routeSettingsMap = new WeakMap();
 const markersDataMap = new WeakMap();
 const markerClusters = new WeakMap();
 const onSelectionChangeMap = new WeakMap();
+const onBeforeRouteCalculationMap = new WeakMap();
+const onAfterRouteCalculationMap = new WeakMap();
 
 const DEPOT_TYPE = {
 	START: 'depot-start',
@@ -40,6 +43,8 @@ async function run(options) {
 			customMarkers = {},
 			showSelectionOrder = false,
 			markerInfoCallback = null,
+			onBeforeRouteCalculation = null,
+			onAfterRouteCalculation = null,
 		} = JSON.parse(el.dataset.adtMap);
 
 		/** @type {RouteSetting} */
@@ -63,6 +68,8 @@ async function run(options) {
 		routeSettingsMap.set(map, routeSettings);
 		markersDataMap.set(map, markers);
 		onSelectionChangeMap.set(map, onSelectionChange);
+		onBeforeRouteCalculationMap.set(map, onBeforeRouteCalculation);
+		onAfterRouteCalculationMap.set(map, onAfterRouteCalculation);
 
 		L.tileLayer("https://api.mapy.cz/v1/maptiles/basic/256/{z}/{x}/{y}?apikey=" + siteKey, {
 			minZoom: 0,
@@ -157,9 +164,7 @@ async function run(options) {
 		}
 
 		if (routeSettings.enabled) {
-			setTimeout(() => {
-				calculateRoute(map);
-			}, 500);
+			calculateRoute(map);
 		}
 
 		if (callback) {
@@ -175,11 +180,10 @@ async function run(options) {
 			if (mutation.type === "childList") {
 				mutation.addedNodes.forEach(node => {
 					if (node.nodeType === 1) {
-						// Zkontroluj samotný node
 						if (node.hasAttribute("data-adt-map")) {
 							applyEventHandlers(node);
 						}
-						// Zkontroluj všechny potomky
+
 						node.querySelectorAll?.('[data-adt-map]').forEach(el => {
 							applyEventHandlers(el);
 						});
@@ -344,9 +348,7 @@ function addMarkers(map, markers, options, selectedOptions, position, selectable
 	map.addLayer(cluster);
 
 	if (loadedCount === totalMarkers) {
-		setTimeout(() => {
-			checkAndApplyPreselection(map, markers, showSelectionOrder, onSelectionChange, selectable);
-		}, 200);
+		checkAndApplyPreselection(map, markers, showSelectionOrder, onSelectionChange, selectable);
 	}
 }
 
@@ -371,7 +373,7 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 		const markers = markerInstances.get(map);
 		markers.set(marker.id, mapMarker);
 
-		mapMarker.on('add', function() {
+		mapMarker.on('add', function () {
 			const el = mapMarker.getElement();
 			if (el) {
 				el.style.cursor = 'pointer';
@@ -512,22 +514,29 @@ async function updateMarkerOrderDisplay(map, marker, orderNumber, isSelected, co
 
 async function createMarkerIcon(map, iconUrl, orderNumber, color = null) {
 	let inlineStyle = null;
-	const response = await fetch(iconUrl);
-	const svg = await response.text();
 	const settings = routeSettingsMap.get(map);
 
 	if ((settings && settings.enabled) || color) {
 		inlineStyle = `--marker-fill: ${color ?? settings.color};`;
 	}
 
+	let svg;
+	if (svgCache.has(iconUrl)) {
+		svg = svgCache.get(iconUrl);
+	} else {
+		const response = await fetch(iconUrl);
+		svg = await response.text();
+		svgCache.set(iconUrl, svg);
+	}
+
 	return L.divIcon({
 		className: 'marker-icon-wrapper',
 		html: `
-			<div class="marker-icon" style="${inlineStyle}">
-				${svg}
-				${orderNumber ? `<span class="selection-order-label">${orderNumber}</span>` : ''}
-			</div>
-		`,
+            <div class="marker-icon" style="${inlineStyle}">
+                ${svg}
+                ${orderNumber ? `<span class="selection-order-label">${orderNumber}</span>` : ''}
+            </div>
+        `,
 		iconSize: [43, 58],
 		iconAnchor: [21, 58]
 	});
@@ -584,65 +593,58 @@ async function calculateRoute(map) {
 	const hasCustomStart = routeSettings.startPoint !== null && routeSettings.startPoint !== undefined;
 	const hasCustomEnd = routeSettings.endPoint !== null && routeSettings.endPoint !== undefined;
 
-	if (hasCustomStart) {
-		addDepotMarker(map, routeSettings.startPoint, DEPOT_TYPE.START);
+	if (hasCustomStart) addDepotMarker(map, routeSettings.startPoint, DEPOT_TYPE.START);
+	if (hasCustomEnd) addDepotMarker(map, routeSettings.endPoint, DEPOT_TYPE.END);
+
+	if (!selectedSet || selectedSet.size === 0) return;
+
+	const orderedIds = Array.from(order.entries())
+		.sort((a, b) => a[1] - b[1])
+		.map(entry => entry[0]);
+	const routeMarkers = orderedIds
+		.map(id => markers.find(m => m.id === id))
+		.filter(m => m !== undefined);
+
+	if (routeMarkers.length < 2) return;
+
+	const beforeCallback = onBeforeRouteCalculationMap.get(map);
+	if (beforeCallback && window[beforeCallback]) {
+		window[beforeCallback]();
 	}
-	if (hasCustomEnd) {
-		addDepotMarker(map, routeSettings.endPoint, DEPOT_TYPE.END);
-	}
 
-	if (selectedSet && selectedSet.size > 0) {
-		const orderedIds = Array.from(order.entries())
-			.sort((a, b) => a[1] - b[1])
-			.map(entry => entry[0]);
-		const routeMarkers = orderedIds
-			.map(id => markers.find(m => m.id === id))
-			.filter(m => m !== undefined);
+	let startPoint = hasCustomStart ? routeSettings.startPoint : routeMarkers[0].position;
+	let endPoint = hasCustomEnd ? routeSettings.endPoint : routeMarkers[routeMarkers.length - 1].position;
 
-		if (routeMarkers.length < 2) {
-			return;
-		}
+	const WAYPOINTS_LIMIT = 15;
+	const allCoords = [];
+	const allParts = [];
+	let totalDuration = 0;
+	let totalLength = 0;
 
-		let startPoint = routeMarkers[0].position;
-		if (hasCustomStart) {
-			startPoint = routeSettings.startPoint;
-		}
-
-		let endPoint = routeMarkers[routeMarkers.length - 1].position;
-		if (hasCustomEnd) {
-			endPoint = routeSettings.endPoint;
-		}
-
-		// API mapy.cz povoluje max 15 waypointů, viz https://developer.mapy.com/cs/rest-api/funkce/planovani/
-		const WAYPOINTS_LIMIT = 15;
-		const allCoords = [];
-
+	try {
 		if (routeMarkers.length <= WAYPOINTS_LIMIT) {
-			// Pokud je markerů méně nebo rovno 15, použijeme původní logiku
 			const params = new URLSearchParams({
 				start: `${startPoint.lon},${startPoint.lat}`,
 				end: `${endPoint.lon},${endPoint.lat}`,
 				routeType: routeSettings.routeType,
 				apikey: siteKey
 			});
+			routeMarkers.forEach(m => params.append('waypoints', `${m.position.lon},${m.position.lat}`));
 
-			routeMarkers.forEach(m => {
-				params.append('waypoints', `${m.position.lon},${m.position.lat}`);
-			});
+			const response = await fetch(`https://api.mapy.cz/v1/routing/route?${params.toString()}`);
+			const data = await response.json();
 
-			try {
-				const response = await fetch(
-					`https://api.mapy.cz/v1/routing/route?${params.toString()}`
-				);
-				const data = await response.json();
-
-				if (data.geometry?.geometry?.coordinates) {
-					const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
-					allCoords.push(...coords);
-				}
-			} catch (error) {
-				console.error('Error calculating route:', error);
-				return;
+			if (data.geometry?.geometry?.coordinates) {
+				allCoords.push(...data.geometry.geometry.coordinates.map(c => [c[1], c[0]]));
+			}
+			if (data.parts) {
+				allParts.push(...data.parts);
+			}
+			if (data.duration) {
+				totalDuration += data.duration;
+			}
+			if (data.length) {
+				totalLength += data.length;
 			}
 		} else {
 			const chunks = [];
@@ -655,18 +657,8 @@ async function calculateRoute(map) {
 				const isFirstChunk = i === 0;
 				const isLastChunk = i === chunks.length - 1;
 
-				let chunkStart, chunkEnd;
-
-				if (isFirstChunk) {
-					chunkStart = startPoint; // Použije custom start nebo první marker
-					chunkEnd = isLastChunk ? endPoint : chunk[chunk.length - 1].position;
-				} else if (isLastChunk) {
-					chunkStart = chunks[i - 1][chunks[i - 1].length - 1].position;
-					chunkEnd = endPoint; // Použije custom end nebo poslední marker
-				} else {
-					chunkStart = chunks[i - 1][chunks[i - 1].length - 1].position;
-					chunkEnd = chunk[chunk.length - 1].position;
-				}
+				const chunkStart = isFirstChunk ? startPoint : chunks[i - 1][chunks[i - 1].length - 1].position;
+				const chunkEnd = isLastChunk ? endPoint : chunk[chunk.length - 1].position;
 
 				const params = new URLSearchParams({
 					start: `${chunkStart.lon},${chunkStart.lat}`,
@@ -676,38 +668,56 @@ async function calculateRoute(map) {
 				});
 
 				const markersToAdd = isFirstChunk ? chunk : chunk.slice(1);
+				markersToAdd.forEach(m => params.append('waypoints', `${m.position.lon},${m.position.lat}`));
 
-				markersToAdd.forEach(m => {
-					params.append('waypoints', `${m.position.lon},${m.position.lat}`);
-				});
+				const response = await fetch(`https://api.mapy.cz/v1/routing/route?${params.toString()}`);
+				const data = await response.json();
 
-				try {
-					const response = await fetch(
-						`https://api.mapy.cz/v1/routing/route?${params.toString()}`
-					);
-					const data = await response.json();
-
-					if (data.geometry?.geometry?.coordinates) {
-						const coords = data.geometry.geometry.coordinates.map(c => [c[1], c[0]]);
-						allCoords.push(...coords);
-					}
-				} catch (error) {
-					console.error(`Error calculating route chunk ${i + 1}:`, error);
-					return;
+				if (data.geometry?.geometry?.coordinates) {
+					allCoords.push(...data.geometry.geometry.coordinates.map(c => [c[1], c[0]]));
+				}
+				if (data.parts) {
+					allParts.push(...data.parts);
+				}
+				if (data.duration) {
+					totalDuration += data.duration;
+				}
+				if (data.length) {
+					totalLength += data.length;
 				}
 			}
 		}
+	} catch (error) {
+		console.error('Error calculating route:', error);
+		const afterCallback = onAfterRouteCalculationMap.get(map);
+		if (afterCallback && window[afterCallback]) window[afterCallback]({}, 0, 0);
 
-		if (allCoords.length > 0) {
-			const polyline = L.polyline(allCoords, {
-				color: routeSettings.color,
-				weight: routeSettings.weight,
-				opacity: routeSettings.opacity
-			}).addTo(map);
-
-			routePolylines.set(map, polyline);
-		}
+		return;
 	}
+
+	if (allCoords.length > 0) {
+		const polyline = L.polyline(allCoords, {
+			color: routeSettings.color,
+			weight: routeSettings.weight,
+			opacity: routeSettings.opacity
+		}).addTo(map);
+		routePolylines.set(map, polyline);
+	}
+
+	// @type {TRouteParts}
+	const routeParts = {};
+	allParts.forEach((part, index) => {
+		if (index < orderedIds.length) {
+			const markerId = orderedIds[index];
+			routeParts[markerId] = {
+				duration: part.duration,
+				length: part.length,
+			};
+		}
+	});
+
+	const afterCallback = onAfterRouteCalculationMap.get(map);
+	if (afterCallback && window[afterCallback]) window[afterCallback](routeParts, totalLength, totalDuration);
 }
 
 function addDepotMarker(map, position, depotType) {
@@ -724,7 +734,7 @@ function addDepotMarker(map, position, depotType) {
 			iconAnchor: [img.width / 2, img.height]
 		});
 
-		L.marker(position, { icon: icon }).addTo(map);
+		L.marker(position, {icon: icon}).addTo(map);
 	};
 }
 
@@ -805,10 +815,31 @@ function setOrder(mapElement, markerId, orderNumber) {
 	updateMarkerOrderDisplay(mapElement, marker, orderNumber, true, color);
 }
 
+function onBeforeRouteCalculation(mapElement, callbackName) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+	onBeforeRouteCalculationMap.set(map, callbackName);
+}
+
+function onAfterRouteCalculation(mapElement, callbackName) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+	onAfterRouteCalculationMap.set(map, callbackName);
+}
+
+function recalculateRoute(mapElement) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+	calculateRoute(map);
+}
+
 export default {
 	run,
 	getSelectedMarkers,
 	clearSelection,
 	toggleMarker,
 	setOrder,
+	onBeforeRouteCalculation,
+	onAfterRouteCalculation,
+	recalculateRoute,
 }
