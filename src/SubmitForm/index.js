@@ -110,6 +110,14 @@ function run(options) {
 
 	$.nette.ext("submitForm", {
 		before: function (xhr, settings) {
+			if (settings.nette && settings.nette.el) {
+				const pendingXhr = settings.nette.el.data('pendingXhr');
+				if (pendingXhr) {
+					pendingXhr.abort();
+				}
+				settings.nette.el.data('pendingXhr', xhr);
+			}
+
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
 				let beforeCallback = settings.nette.el.attr('data-adt-submit-form-before-callback');
 				if (beforeCallback) {
@@ -156,6 +164,10 @@ function run(options) {
 			}
 		},
 		complete:  function (xhr, status, settings) {
+			if (settings.nette && settings.nette.el) {
+				settings.nette.el.data('pendingXhr', null);
+			}
+
 			// if there are errors we will scroll to first of them
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.alert-danger, .is-invalid').length > 0) {
 				scrollToFirstError(settings.nette.form);

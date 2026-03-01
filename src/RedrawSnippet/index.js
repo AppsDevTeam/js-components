@@ -4,7 +4,11 @@ async function run(options) {
 		if ($el.is('button, input[type="button"], input[type="submit"]')) {
 			$el.on('click', sendNetteAjax);
 		} else if ($el.is('input:not([type="button"]):not([type="submit"]), select, textarea')) {
-			$el.on('input', sendNetteAjax);
+			let debounceTimer;
+			$el.on('input', function(e) {
+				clearTimeout(debounceTimer);
+				debounceTimer = setTimeout(() => sendNetteAjax(e), 500);
+			});
 		}
 	}
 
