@@ -799,6 +799,64 @@ function toggleMarker(mapElement, markerId, selected) {
 	}
 }
 
+function addMarkerAndSelect(mapElement, markerData) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+
+	const markers = markerInstances.get(map);
+	const routeSettings = routeSettingsMap.get(map);
+	const markersData = markersDataMap.get(map);
+	const cluster = markerClusters.get(map);
+
+	if (markers.has(markerData.id)) {
+		const existing = markers.get(markerData.id);
+		selectMarker(existing, map, true);
+		return;
+	}
+
+	const iconUrl = routeSettings?.customMarkers?.normal || markerImg;
+	const img = new Image();
+	img.src = iconUrl;
+	img.onload = function () {
+		const icon = L.icon({
+			iconUrl,
+			iconSize: [img.width, img.height],
+			iconAnchor: [img.width / 2, img.height]
+		});
+
+		const options = { icon };
+		const selectedOptions = { icon: L.icon({
+				iconUrl: routeSettings?.customMarkers?.selected || iconUrl,
+				iconSize: [img.width, img.height],
+				iconAnchor: [img.width / 2, img.height]
+			})};
+
+		const newMarker = createMarker(
+			markerData,
+			options,
+			selectedOptions,
+			cluster || null,
+			true,
+			onSelectionChangeMap.get(map),
+			map,
+			true,
+			null
+		);
+
+		if (!cluster) {
+			newMarker.addTo(map);
+		}
+
+		markersData.push(markerData);
+
+		selectMarker(newMarker, map, true);
+
+		if (routeSettings?.enabled) {
+			calculateRoute(map);
+		}
+	};
+}
+
 function setOrder(mapElement, markerId, orderNumber) {
 	let color = null;
 	const map = mapInstances.get(mapElement);
@@ -842,4 +900,5 @@ export default {
 	onBeforeRouteCalculation,
 	onAfterRouteCalculation,
 	recalculateRoute,
+	addMarkerAndSelect,
 }
