@@ -55,7 +55,6 @@ async function run(options) {
 			onAfterRouteCalculation = null,
 		} = JSON.parse(el.dataset.adtMap);
 
-		/** @type {RouteSetting} */
 		const routeSettings = {
 			...defaultRouteSettings,
 			...route,
@@ -119,6 +118,13 @@ async function run(options) {
 				map.setView(position, zoom);
 			} else {
 				map.fitBounds([position]);
+			}
+		} else if (!markers.length) {
+			const depot = routeSettings.startPoint ?? routeSettings.endPoint;
+			if (depot) {
+				map.setView([depot.lat, depot.lon], zoom ?? 12);
+			} else {
+				map.setView([50.0755, 14.4378], 7);
 			}
 		}
 
@@ -580,7 +586,7 @@ async function calculateRoute(map) {
 		if (isHere) {
 			await calculateRouteHere({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
 		} else {
-			await calculateRouteMapyCz({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
+			await calculateRouteMapy({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
 		}
 	} catch (error) {
 		console.error('Error calculating route:', error);
@@ -616,7 +622,7 @@ async function calculateRoute(map) {
 	}
 }
 
-async function calculateRouteMapyCz({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts }) {
+async function calculateRouteMapy({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts }) {
 	const WAYPOINTS_LIMIT = 15;
 
 	const chunks = [];
@@ -760,64 +766,6 @@ function toggleMarker(mapElement, markerId, selected) {
 	}
 }
 
-function addMarkerAndSelect(mapElement, markerData) {
-	const map = mapInstances.get(mapElement);
-	if (!map) return;
-
-	const markers = markerInstances.get(map);
-	const routeSettings = routeSettingsMap.get(map);
-	const markersData = markersDataMap.get(map);
-	const cluster = markerClusters.get(map);
-
-	if (markers.has(markerData.id)) {
-		const existing = markers.get(markerData.id);
-		selectMarker(existing, map, true);
-		return;
-	}
-
-	const iconUrl = routeSettings?.customMarkers?.normal || markerImg;
-	const img = new Image();
-	img.src = iconUrl;
-	img.onload = function () {
-		const icon = L.icon({
-			iconUrl,
-			iconSize: [img.width, img.height],
-			iconAnchor: [img.width / 2, img.height]
-		});
-
-		const options = { icon };
-		const selectedOptions = { icon: L.icon({
-				iconUrl: routeSettings?.customMarkers?.selected || iconUrl,
-				iconSize: [img.width, img.height],
-				iconAnchor: [img.width / 2, img.height]
-			})};
-
-		const newMarker = createMarker(
-			markerData,
-			options,
-			selectedOptions,
-			cluster || null,
-			true,
-			onSelectionChangeMap.get(map),
-			map,
-			true,
-			null
-		);
-
-		if (!cluster) {
-			newMarker.addTo(map);
-		}
-
-		markersData.push(markerData);
-
-		selectMarker(newMarker, map, true);
-
-		if (routeSettings?.enabled) {
-			calculateRoute(map);
-		}
-	};
-}
-
 function setOrder(mapElement, markerId, orderNumber) {
 	let color = null;
 	const map = mapInstances.get(mapElement);
@@ -849,6 +797,76 @@ function recalculateRoute(mapElement) {
 	calculateRoute(map);
 }
 
+
+function addMarkerAndSelect(mapElement, markerData) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+
+	const markers = markerInstances.get(map);
+	const routeSettings = routeSettingsMap.get(map);
+	const markersData = markersDataMap.get(map);
+	const cluster = markerClusters.get(map);
+
+	if (markers.has(markerData.id)) {
+		const existing = markers.get(markerData.id);
+		selectMarker(existing, map, true);
+		return;
+	}
+
+	const normalIconUrl = routeSettings?.customMarkers?.normal || markerImg;
+	const selectedIconUrl = routeSettings?.customMarkers?.selected || normalIconUrl;
+
+	const normalImg = new Image();
+	normalImg.src = normalIconUrl;
+	normalImg.onload = function () {
+		const normalIcon = L.icon({
+			iconUrl: normalIconUrl,
+			iconSize: [normalImg.width, normalImg.height],
+			iconAnchor: [normalImg.width / 2, normalImg.height],
+		});
+
+		const loadSelectedIcon = (callback) => {
+			if (selectedIconUrl === normalIconUrl) {
+				callback(normalIcon);
+				return;
+			}
+			const selectedImgEl = new Image();
+			selectedImgEl.src = selectedIconUrl;
+			selectedImgEl.onload = function () {
+				callback(L.icon({
+					iconUrl: selectedIconUrl,
+					iconSize: [selectedImgEl.width, selectedImgEl.height],
+					iconAnchor: [selectedImgEl.width / 2, selectedImgEl.height],
+				}));
+			};
+		};
+
+		loadSelectedIcon((selectedIcon) => {
+			const newMarker = createMarker(
+				markerData,
+				{ icon: normalIcon },
+				{ icon: selectedIcon },
+				cluster || null,
+				true,
+				onSelectionChangeMap.get(map),
+				map,
+				true,
+				null
+			);
+
+			if (!cluster) {
+				newMarker.addTo(map);
+			}
+
+			markersData.push(markerData);
+			selectMarker(newMarker, map, true);
+
+			if (routeSettings?.enabled) {
+				calculateRoute(map);
+			}
+		});
+	};
+}
 export default {
 	run,
 	getSelectedMarkers,
