@@ -120,6 +120,13 @@ async function run(options) {
 			} else {
 				map.fitBounds([position]);
 			}
+		} else if (!markers.length) {
+			const depot = routeSettings.startPoint ?? routeSettings.endPoint;
+			if (depot) {
+				map.setView([depot.lat, depot.lon], zoom ?? 12);
+			} else {
+				map.setView([50.0755, 14.4378], 7);
+			}
 		}
 
 		map.scrollWheelZoom.disable();
@@ -760,6 +767,19 @@ function toggleMarker(mapElement, markerId, selected) {
 	}
 }
 
+function setOrder(mapElement, markerId, orderNumber) {
+	let color = null;
+	const map = mapInstances.get(mapElement);
+	const settings = $(mapElement).data('adt-map');
+	const markers = markerInstances.get(map);
+	const marker = markers?.get(markerId);
+	if (settings && settings.route && settings.route.enabled) {
+		color = settings.route.color;
+	}
+	if (!marker) return;
+	updateMarkerOrderDisplay(mapElement, marker, orderNumber, true, color);
+}
+
 function addMarkerAndSelect(mapElement, markerData) {
 	const map = mapInstances.get(mapElement);
 	if (!map) return;
@@ -775,60 +795,59 @@ function addMarkerAndSelect(mapElement, markerData) {
 		return;
 	}
 
-	const iconUrl = routeSettings?.customMarkers?.normal || markerImg;
-	const img = new Image();
-	img.src = iconUrl;
-	img.onload = function () {
-		const icon = L.icon({
-			iconUrl,
-			iconSize: [img.width, img.height],
-			iconAnchor: [img.width / 2, img.height]
+	const normalIconUrl = routeSettings?.customMarkers?.normal || markerImg;
+	const selectedIconUrl = routeSettings?.customMarkers?.selected || normalIconUrl;
+
+	const normalImg = new Image();
+	normalImg.src = normalIconUrl;
+	normalImg.onload = function () {
+		const normalIcon = L.icon({
+			iconUrl: normalIconUrl,
+			iconSize: [normalImg.width, normalImg.height],
+			iconAnchor: [normalImg.width / 2, normalImg.height],
 		});
 
-		const options = { icon };
-		const selectedOptions = { icon: L.icon({
-				iconUrl: routeSettings?.customMarkers?.selected || iconUrl,
-				iconSize: [img.width, img.height],
-				iconAnchor: [img.width / 2, img.height]
-			})};
+		const loadSelectedIcon = (callback) => {
+			if (selectedIconUrl === normalIconUrl) {
+				callback(normalIcon);
+				return;
+			}
+			const selectedImgEl = new Image();
+			selectedImgEl.src = selectedIconUrl;
+			selectedImgEl.onload = function () {
+				callback(L.icon({
+					iconUrl: selectedIconUrl,
+					iconSize: [selectedImgEl.width, selectedImgEl.height],
+					iconAnchor: [selectedImgEl.width / 2, selectedImgEl.height],
+				}));
+			};
+		};
 
-		const newMarker = createMarker(
-			markerData,
-			options,
-			selectedOptions,
-			cluster || null,
-			true,
-			onSelectionChangeMap.get(map),
-			map,
-			true,
-			null
-		);
+		loadSelectedIcon((selectedIcon) => {
+			const newMarker = createMarker(
+				markerData,
+				{ icon: normalIcon },
+				{ icon: selectedIcon },
+				cluster || null,
+				true,
+				onSelectionChangeMap.get(map),
+				map,
+				true,
+				null
+			);
 
-		if (!cluster) {
-			newMarker.addTo(map);
-		}
+			if (!cluster) {
+				newMarker.addTo(map);
+			}
 
-		markersData.push(markerData);
+			markersData.push(markerData);
+			selectMarker(newMarker, map, true);
 
-		selectMarker(newMarker, map, true);
-
-		if (routeSettings?.enabled) {
-			calculateRoute(map);
-		}
+			if (routeSettings?.enabled) {
+				calculateRoute(map);
+			}
+		});
 	};
-}
-
-function setOrder(mapElement, markerId, orderNumber) {
-	let color = null;
-	const map = mapInstances.get(mapElement);
-	const settings = $(mapElement).data('adt-map');
-	const markers = markerInstances.get(map);
-	const marker = markers?.get(markerId);
-	if (settings && settings.route && settings.route.enabled) {
-		color = settings.route.color;
-	}
-	if (!marker) return;
-	updateMarkerOrderDisplay(mapElement, marker, orderNumber, true, color);
 }
 
 function onBeforeRouteCalculation(mapElement, callbackName) {
