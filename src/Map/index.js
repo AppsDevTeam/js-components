@@ -760,7 +760,7 @@ function clearSelection(mapElement) {
 	order.clear();
 }
 
-function toggleMarker(mapElement, markerId, selected) {
+async function toggleMarker(mapElement, markerId, selected, recalculate = true) {
 	const map = mapInstances.get(mapElement);
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
@@ -770,7 +770,7 @@ function toggleMarker(mapElement, markerId, selected) {
 	const isSelected = selectedSet.has(markerId);
 
 	if (selected && !isSelected) {
-		selectMarker(marker, map, true);
+		await selectMarker(marker, map, true);
 	} else if (!selected && isSelected) {
 		deselectMarker(marker, map, true);
 	} else {
@@ -783,7 +783,7 @@ function toggleMarker(mapElement, markerId, selected) {
 	}
 
 	const settings = routeSettingsMap.get(map);
-	if (settings && settings.enabled) {
+	if (recalculate && settings && settings.enabled) {
 		calculateRoute(map);
 	}
 }
@@ -815,7 +815,9 @@ function onAfterRouteCalculation(mapElement, callbackName) {
 
 function recalculateRoute(mapElement) {
 	const map = mapInstances.get(mapElement);
+
 	if (!map) return;
+
 	calculateRoute(map);
 }
 
@@ -855,8 +857,9 @@ function removeMarker(mapElement, markerId) {
 	}
 }
 
-function addMarkerAndSelect(mapElement, markerData) {
+function addMarkerAndSelect(mapElement, markerData, recalculate = true) {
 	const map = mapInstances.get(mapElement);
+
 	if (!map) return;
 
 	const markers = markerInstances.get(map);
@@ -898,13 +901,15 @@ function addMarkerAndSelect(mapElement, markerData) {
 			};
 		};
 
-		loadSelectedIcon((selectedIcon) => {
+		loadSelectedIcon(async (selectedIcon) => {
+			const mapConfig = JSON.parse(mapElement.dataset.adtMap ?? '{}');
+			const selectable = mapConfig.selectable ?? false;
 			const newMarker = createMarker(
 				markerData,
 				{ icon: normalIcon },
 				{ icon: selectedIcon },
 				cluster || null,
-				true,
+				selectable,
 				onSelectionChangeMap.get(map),
 				map,
 				true,
@@ -916,9 +921,9 @@ function addMarkerAndSelect(mapElement, markerData) {
 			}
 
 			markersData.push(markerData);
-			selectMarker(newMarker, map, true);
+			await selectMarker(newMarker, map, true);
 
-			if (routeSettings?.enabled) {
+			if (recalculate && routeSettings?.enabled) {
 				calculateRoute(map);
 			}
 		});
