@@ -139,6 +139,7 @@ async function run(options) {
 			enableRectangleSelection(map, onSelectionChange, showSelectionOrder);
 		}
 
+		/** @type {RouteSetting} */
 		const markerOptions = {};
 		const customMarkerOptions = {};
 		const normalImg = customMarkers.normal || markerImg;
@@ -346,9 +347,23 @@ function addMarkers(map, markers, options, selectedOptions, position, selectable
 }
 
 function checkAndApplyPreselection(map, markers, showSelectionOrder, onSelectionChange, selectable) {
-	if (selectable && showSelectionOrder) {
+	if (showSelectionOrder) {
 		applyPreselectedMarkers(map, markers, showSelectionOrder, onSelectionChange);
+	} else if (!selectable) {
+		applyPreselectedMarkersVisualOnly(map, markers);
 	}
+}
+
+function applyPreselectedMarkersVisualOnly(map, markersData) {
+	const markerMap = markerInstances.get(map);
+	const preselected = markersData.filter(m => m.selected === true);
+
+	preselected.forEach((markerData) => {
+		const markerInstance = markerMap.get(markerData.id);
+		if (markerInstance && markerInstance._selectedIcon) {
+			markerInstance.setIcon(markerInstance._selectedIcon);
+		}
+	});
 }
 
 function createMarker(marker, options, selectedOptions, cluster = null, selectable = false, onSelectionChange = null, map = null, showSelectionOrder = false, markerInfoCallback = null) {
@@ -426,6 +441,11 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 async function selectMarker(marker, map, showSelectionOrder) {
 	const selected = selectedMarkers.get(map);
 	const order = selectionOrder.get(map);
+
+	if (selected.has(marker.options.id)) {
+		return;
+	}
+
 	selected.add(marker.options.id);
 	const maxOrder = order.size > 0 ? Math.max(...order.values()) : 0;
 	const newOrder = maxOrder + 1;
@@ -512,21 +532,21 @@ async function createMarkerIcon(map, iconUrl, orderNumber, color = null) {
 	});
 }
 
-function applyPreselectedMarkers(map, markersData, showSelectionOrder, onSelectionChange) {
+async function applyPreselectedMarkers(map, markersData, showSelectionOrder, onSelectionChange) {
 	const markerMap = markerInstances.get(map);
 	const order = selectionOrder.get(map);
 	const preselected = markersData
 		.filter(m => m.selected === true)
 		.sort((a, b) => (a.selectionOrder || 0) - (b.selectionOrder || 0));
 
-	preselected.forEach((markerData) => {
+	for (const markerData of preselected) {
 		const markerInstance = markerMap.get(markerData.id);
 		if (markerInstance) {
-			selectMarker(markerInstance, map, showSelectionOrder);
+			await selectMarker(markerInstance, map, showSelectionOrder);
 		} else {
 			console.warn('Marker instance NOT found for ID:', markerData.id);
 		}
-	});
+	}
 
 	if (onSelectionChange && window[onSelectionChange] && order.size > 0) {
 		const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
@@ -534,7 +554,8 @@ function applyPreselectedMarkers(map, markersData, showSelectionOrder, onSelecti
 	}
 
 	const settings = routeSettingsMap.get(map);
-	if (settings && settings.enabled && order.size >= 2) {
+	const hasDepot = settings?.startPoint !== null && settings?.startPoint !== undefined || settings?.endPoint !== null && settings?.endPoint !== undefined;
+	if (settings && settings.enabled && order.size >= (hasDepot ? 1 : 2)) {
 		calculateRoute(map);
 	}
 }
@@ -568,7 +589,7 @@ async function calculateRoute(map) {
 	const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
 	const routeMarkers = orderedIds.map(id => markers.find(m => m.id === id)).filter(m => m !== undefined);
 
-	if (routeMarkers.length < 2) return;
+	if (routeMarkers.length < (hasCustomStart || hasCustomEnd ? 1 : 2)) return;
 
 	const beforeCallback = onBeforeRouteCalculationMap.get(map);
 	if (beforeCallback && window[beforeCallback]) {
@@ -586,7 +607,7 @@ async function calculateRoute(map) {
 		if (isHere) {
 			await calculateRouteHere({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
 		} else {
-			await calculateRouteMapy({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
+			await calculateRouteMapyCz({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
 		}
 	} catch (error) {
 		console.error('Error calculating route:', error);
@@ -604,6 +625,7 @@ async function calculateRoute(map) {
 			opacity: routeSettings.opacity
 		}).addTo(map);
 		routePolylines.set(map, polyline);
+		map.fitBounds(polyline.getBounds(), { padding: [32, 32] });
 	}
 
 	const totalDuration = allParts.reduce((s, p) => s + (p.duration || 0), 0);
@@ -622,7 +644,7 @@ async function calculateRoute(map) {
 	}
 }
 
-async function calculateRouteMapy({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts }) {
+async function calculateRouteMapyCz({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts }) {
 	const WAYPOINTS_LIMIT = 15;
 
 	const chunks = [];
@@ -797,6 +819,41 @@ function recalculateRoute(mapElement) {
 	calculateRoute(map);
 }
 
+function removeMarker(mapElement, markerId) {
+	const map = mapInstances.get(mapElement);
+	if (!map) return;
+
+	const markers = markerInstances.get(map);
+	const marker = markers?.get(markerId);
+	if (!marker) return;
+
+	const cluster = markerClusters.get(map);
+	if (cluster) {
+		cluster.removeLayer(marker);
+	} else {
+		map.removeLayer(marker);
+	}
+
+	markers.delete(markerId);
+
+	const selected = selectedMarkers.get(map);
+	const order = selectionOrder.get(map);
+	if (selected.has(markerId)) {
+		const removedOrder = order.get(markerId);
+		selected.delete(markerId);
+		order.delete(markerId);
+		order.forEach((value, key) => { if (value > removedOrder) order.set(key, value - 1); });
+	}
+
+	const markersData = markersDataMap.get(map);
+	const idx = markersData.findIndex(m => m.id === markerId);
+	if (idx !== -1) markersData.splice(idx, 1);
+
+	const settings = routeSettingsMap.get(map);
+	if (settings?.enabled) {
+		calculateRoute(map);
+	}
+}
 
 function addMarkerAndSelect(mapElement, markerData) {
 	const map = mapInstances.get(mapElement);
@@ -877,4 +934,5 @@ export default {
 	onAfterRouteCalculation,
 	recalculateRoute,
 	addMarkerAndSelect,
+	removeMarker,
 }
