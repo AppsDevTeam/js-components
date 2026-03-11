@@ -21,6 +21,7 @@ const markerClusters = new WeakMap();
 const onSelectionChangeMap = new WeakMap();
 const onBeforeRouteCalculationMap = new WeakMap();
 const onAfterRouteCalculationMap = new WeakMap();
+const disableClickZoomMap = new WeakMap();
 
 const DEPOT_TYPE = {
 	START: 'depot-start',
@@ -53,6 +54,7 @@ async function run(options) {
 			markerInfoCallback = null,
 			onBeforeRouteCalculation = null,
 			onAfterRouteCalculation = null,
+			disableClickZoom = false
 		} = JSON.parse(el.dataset.adtMap);
 
 		const routeSettings = {
@@ -78,6 +80,7 @@ async function run(options) {
 		onSelectionChangeMap.set(map, onSelectionChange);
 		onBeforeRouteCalculationMap.set(map, onBeforeRouteCalculation);
 		onAfterRouteCalculationMap.set(map, onAfterRouteCalculation);
+		disableClickZoomMap.set(map, disableClickZoom);
 
 		if (mapProvider === MAP_PROVIDER.HERE) {
 			L.tileLayer(
@@ -625,7 +628,10 @@ async function calculateRoute(map) {
 			opacity: routeSettings.opacity
 		}).addTo(map);
 		routePolylines.set(map, polyline);
-		map.fitBounds(polyline.getBounds(), { padding: [32, 32] });
+
+		if (!disableClickZoomMap.get(map)) {
+			map.fitBounds(polyline.getBounds(), {padding: [32, 32]});
+		}
 	}
 
 	const totalDuration = allParts.reduce((s, p) => s + (p.duration || 0), 0);
