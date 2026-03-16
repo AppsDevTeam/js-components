@@ -232,7 +232,7 @@ function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 	let rectangle = null;
 
 	map.on('mousedown', (e) => {
-		if (e.originalEvent.ctrlKey && e.originalEvent.shiftKey) {
+		if (e.originalEvent.ctrlKey && !e.originalEvent.shiftKey) {
 			isDrawing = true;
 			startPoint = e.latlng;
 			rectangle = L.rectangle([startPoint, startPoint], { color: '#3388ff', weight: 2, fillOpacity: 0.1 }).addTo(map);
@@ -395,33 +395,45 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 
 	if (selectable && map) {
 		mapMarker.on('click', function (e) {
-			if (e.originalEvent.shiftKey && !e.originalEvent.ctrlKey && markerInfoCallback && window[markerInfoCallback]) {
-				window[markerInfoCallback](marker);
+			if (e.originalEvent.ctrlKey) {
 				L.DomEvent.stopPropagation(e);
 				L.DomEvent.preventDefault(e);
+
+				const selected = selectedMarkers.get(map);
+				if (selected.has(marker.id)) {
+					deselectMarker(mapMarker, map, showSelectionOrder);
+				} else {
+					selectMarker(mapMarker, map, showSelectionOrder);
+				}
+
+				if (onSelectionChange && window[onSelectionChange]) {
+					const order = selectionOrder.get(map);
+					const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
+					window[onSelectionChange](orderedIds);
+				}
+
+				const settings = routeSettingsMap.get(map);
+				if (settings && settings.enabled) {
+					calculateRoute(map);
+				}
+
+				if (originalCallback && window[originalCallback]) {
+					window[originalCallback](e);
+				}
 				return;
 			}
 
-			const selected = selectedMarkers.get(map);
-			if (selected.has(marker.id)) {
-				deselectMarker(mapMarker, map, showSelectionOrder);
-			} else {
-				selectMarker(mapMarker, map, showSelectionOrder);
+			if (markerInfoCallback && window[markerInfoCallback]) {
+				L.DomEvent.stopPropagation(e);
+				L.DomEvent.preventDefault(e);
+				window[markerInfoCallback](marker);
+				return;
 			}
 
-			if (onSelectionChange && window[onSelectionChange]) {
-				const order = selectionOrder.get(map);
-				const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
-				window[onSelectionChange](orderedIds);
-			}
-
-			const settings = routeSettingsMap.get(map);
-			if (settings && settings.enabled) {
-				calculateRoute(map);
-			}
 			if (originalCallback && window[originalCallback]) {
 				window[originalCallback](e);
 			}
+
 			L.DomEvent.stopPropagation(e);
 		});
 	} else if (originalCallback) {
@@ -935,6 +947,7 @@ function addMarkerAndSelect(mapElement, markerData, recalculate = true) {
 		});
 	};
 }
+
 export default {
 	run,
 	getSelectedMarkers,
