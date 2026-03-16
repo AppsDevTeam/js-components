@@ -142,7 +142,6 @@ async function run(options) {
 			enableRectangleSelection(map, onSelectionChange, showSelectionOrder);
 		}
 
-		/** @type {RouteSetting} */
 		const markerOptions = {};
 		const customMarkerOptions = {};
 		const normalImg = customMarkers.normal || markerImg;
@@ -229,28 +228,39 @@ async function run(options) {
 function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 	let isDrawing = false;
 	let startPoint = null;
+	let startPixel = null;
 	let rectangle = null;
+	const DRAG_THRESHOLD = 8;
 
 	map.on('mousedown', (e) => {
-		if (e.originalEvent.ctrlKey && !e.originalEvent.shiftKey) {
-			isDrawing = true;
+		if ((e.originalEvent.ctrlKey || e.originalEvent.metaKey) && !e.originalEvent.shiftKey) {
 			startPoint = e.latlng;
-			rectangle = L.rectangle([startPoint, startPoint], { color: '#3388ff', weight: 2, fillOpacity: 0.1 }).addTo(map);
+			startPixel = { x: e.originalEvent.clientX, y: e.originalEvent.clientY };
 			map.dragging.disable();
-			e.originalEvent.preventDefault();
 		}
 	});
 
 	map.on('mousemove', (e) => {
+		if (startPoint && !isDrawing) {
+			const dx = e.originalEvent.clientX - startPixel.x;
+			const dy = e.originalEvent.clientY - startPixel.y;
+			if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+				isDrawing = true;
+				rectangle = L.rectangle([startPoint, startPoint], { color: '#3388ff', weight: 2, fillOpacity: 0.1 }).addTo(map);
+			}
+		}
 		if (isDrawing && rectangle) {
 			rectangle.setBounds([startPoint, e.latlng]);
 		}
 	});
 
 	map.on('mouseup', (e) => {
+		if (startPoint) {
+			map.dragging.enable();
+		}
+
 		if (isDrawing) {
 			isDrawing = false;
-			map.dragging.enable();
 
 			if (rectangle) {
 				const bounds = rectangle.getBounds();
@@ -287,6 +297,9 @@ function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 				}
 			}
 		}
+
+		startPoint = null;
+		startPixel = null;
 	});
 }
 
@@ -395,7 +408,7 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 
 	if (selectable && map) {
 		mapMarker.on('click', function (e) {
-			if (e.originalEvent.ctrlKey) {
+			if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) {
 				L.DomEvent.stopPropagation(e);
 				L.DomEvent.preventDefault(e);
 
@@ -436,8 +449,18 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 
 			L.DomEvent.stopPropagation(e);
 		});
-	} else if (originalCallback) {
-		mapMarker.on('click', window[originalCallback]);
+	} else if (markerInfoCallback || originalCallback) {
+		mapMarker.on('click', function (e) {
+			if (markerInfoCallback && window[markerInfoCallback]) {
+				L.DomEvent.stopPropagation(e);
+				L.DomEvent.preventDefault(e);
+				window[markerInfoCallback](marker);
+				return;
+			}
+			if (originalCallback && window[originalCallback]) {
+				window[originalCallback](e);
+			}
+		});
 	}
 
 	if (marker.popup) {
