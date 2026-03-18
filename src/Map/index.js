@@ -22,6 +22,7 @@ const onSelectionChangeMap = new WeakMap();
 const onBeforeRouteCalculationMap = new WeakMap();
 const onAfterRouteCalculationMap = new WeakMap();
 const disableClickZoomMap = new WeakMap();
+const cachedRouteLoaded = new WeakMap();
 
 const DEPOT_TYPE = {
 	START: 'depot-start',
@@ -293,7 +294,7 @@ function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 
 				const settings = routeSettingsMap.get(map);
 				if (settings && settings.enabled) {
-					calculateRoute(map);
+					calculateRoute(map, true);
 				}
 			}
 		}
@@ -427,7 +428,7 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 
 				const settings = routeSettingsMap.get(map);
 				if (settings && settings.enabled) {
-					calculateRoute(map);
+					calculateRoute(map, true);
 				}
 
 				if (originalCallback && window[originalCallback]) {
@@ -598,12 +599,16 @@ async function applyPreselectedMarkers(map, markersData, showSelectionOrder, onS
 	}
 }
 
-async function calculateRoute(map) {
+async function calculateRoute(map, invalidateCache = false) {
 	const selectedSet = selectedMarkers.get(map);
 	const order = selectionOrder.get(map);
 	const markers = markersDataMap.get(map);
 	const routeSettings = routeSettingsMap.get(map);
 	const oldPolyline = routePolylines.get(map);
+
+	if (invalidateCache) {
+		cachedRouteLoaded.set(map, false);
+	}
 
 	if (oldPolyline) {
 		map.removeLayer(oldPolyline);
@@ -620,6 +625,37 @@ async function calculateRoute(map) {
 	}
 	if (hasCustomEnd) {
 		addDepotMarker(map, routeSettings.endPoint, DEPOT_TYPE.END);
+	}
+
+	if (routeSettings.cachedRouteUrl && !invalidateCache) {
+		if (cachedRouteLoaded.get(map)) {
+			return;
+		}
+
+		try {
+			const response = await fetch(routeSettings.cachedRouteUrl);
+			console.log('Loading cached route from:', routeSettings.cachedRouteUrl);
+			if (response.ok) {
+				cachedRouteLoaded.set(map, true);
+				const coords = await response.json();
+
+				if (coords && coords.length > 0) {
+					const polyline = L.polyline(coords, {
+						color: routeSettings.color,
+						weight: routeSettings.weight,
+						opacity: routeSettings.opacity
+					}).addTo(map);
+					routePolylines.set(map, polyline);
+
+					if (!disableClickZoomMap.get(map)) {
+						map.fitBounds(polyline.getBounds(), { padding: [32, 32] });
+					}
+					return;
+				}
+			}
+		} catch (e) {
+			console.error('Error loading cached route:', e);
+		}
 	}
 
 	if (!selectedSet || selectedSet.size === 0) return;
@@ -642,6 +678,7 @@ async function calculateRoute(map) {
 	const allParts = [];
 
 	try {
+		console.log('Calculating route...');
 		if (isHere) {
 			await calculateRouteHere({ routeMarkers, startPoint, endPoint, routeSettings, allCoords, allParts });
 		} else {
@@ -681,7 +718,7 @@ async function calculateRoute(map) {
 
 	const afterCallback = onAfterRouteCalculationMap.get(map);
 	if (afterCallback && window[afterCallback]) {
-		window[afterCallback](routeParts, totalLength, totalDuration);
+		window[afterCallback](routeParts, totalLength, totalDuration, allCoords);
 	}
 }
 
@@ -825,7 +862,7 @@ async function toggleMarker(mapElement, markerId, selected, recalculate = true) 
 
 	const settings = routeSettingsMap.get(map);
 	if (recalculate && settings && settings.enabled) {
-		calculateRoute(map);
+		calculateRoute(map, true);
 	}
 }
 
@@ -859,10 +896,10 @@ function recalculateRoute(mapElement) {
 
 	if (!map) return;
 
-	calculateRoute(map);
+	calculateRoute(map, true);
 }
 
-function removeMarker(mapElement, markerId) {
+function removeMarker(mapElement, markerId, recalculate = true) {
 	const map = mapInstances.get(mapElement);
 	if (!map) return;
 
@@ -893,8 +930,8 @@ function removeMarker(mapElement, markerId) {
 	if (idx !== -1) markersData.splice(idx, 1);
 
 	const settings = routeSettingsMap.get(map);
-	if (settings?.enabled) {
-		calculateRoute(map);
+	if (recalculate && settings?.enabled) {
+		calculateRoute(map, true);
 	}
 }
 
@@ -965,7 +1002,7 @@ function addMarkerAndSelect(mapElement, markerData, recalculate = true) {
 			await selectMarker(newMarker, map, true);
 
 			if (recalculate && routeSettings?.enabled) {
-				calculateRoute(map);
+				calculateRoute(map, true);
 			}
 		});
 	};
