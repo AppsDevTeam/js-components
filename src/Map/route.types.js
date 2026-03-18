@@ -3,7 +3,8 @@ export const defaultRouteSettings = {
     color: 'blue',
     weight: 4,
     opacity: 0.7,
-    routeType: 'car_fast'
+    routeType: 'car_fast',
+    cachedRouteUrl: null,
 };
 
 /**
