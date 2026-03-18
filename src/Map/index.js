@@ -611,7 +611,7 @@ async function calculateRoute(map, invalidateCache = false) {
 	}
 
 	if (oldPolyline) {
-		map.removeLayer(oldPolyline);
+		oldPolyline.remove();
 		routePolylines.set(map, null);
 	}
 
@@ -632,11 +632,12 @@ async function calculateRoute(map, invalidateCache = false) {
 			return;
 		}
 
+		cachedRouteLoaded.set(map, true);
+
 		try {
 			const response = await fetch(routeSettings.cachedRouteUrl);
 			console.log('Loading cached route from:', routeSettings.cachedRouteUrl);
 			if (response.ok) {
-				cachedRouteLoaded.set(map, true);
 				const coords = await response.json();
 
 				if (coords && coords.length > 0) {
@@ -653,7 +654,10 @@ async function calculateRoute(map, invalidateCache = false) {
 					return;
 				}
 			}
+
+			cachedRouteLoaded.set(map, false);
 		} catch (e) {
+			cachedRouteLoaded.set(map, false);
 			console.error('Error loading cached route:', e);
 		}
 	}
