@@ -10,6 +10,7 @@ let siteKey;
 let markerImg;
 let mapProvider;
 const svgCache = new Map();
+const mapInstancesById = new Map();
 const mapInstances = new WeakMap();
 const selectedMarkers = new WeakMap();
 const selectionOrder = new WeakMap();
@@ -58,6 +59,7 @@ async function run(options) {
 			disableClickZoom = false
 		} = JSON.parse(el.dataset.adtMap);
 
+		/** @type {RouteSetting} */
 		const routeSettings = {
 			...defaultRouteSettings,
 			...route,
@@ -65,13 +67,20 @@ async function run(options) {
 			mapProvider,
 		};
 
-		if (mapInstances.has(el)) {
-			mapInstances.get(el).remove();
-			mapInstances.delete(el);
+		const elId = el.id;
+		if (elId && mapInstancesById.has(elId)) {
+			const oldMap = mapInstancesById.get(elId);
+			oldMap.remove();
+			mapInstancesById.delete(elId);
 		}
 
 		const map = L.map(el);
 		mapInstances.set(el, map);
+
+		if (elId) {
+			mapInstancesById.set(elId, map);
+		}
+
 		selectedMarkers.set(map, new Set());
 		selectionOrder.set(map, new Map());
 		markerInstances.set(map, new Map());
@@ -204,9 +213,21 @@ async function run(options) {
 				mutation.addedNodes.forEach(node => {
 					if (node.nodeType === 1) {
 						if (node.hasAttribute("data-adt-map")) {
+							const oldMapElement = document.querySelector('[data-adt-map]');
+							if (oldMapElement && oldMapElement !== node && mapInstances.has(oldMapElement)) {
+								mapInstances.get(oldMapElement).remove();
+								mapInstances.delete(oldMapElement);
+							}
 							applyEventHandlers(node);
 						}
-						node.querySelectorAll?.('[data-adt-map]').forEach(el => applyEventHandlers(el));
+						node.querySelectorAll?.('[data-adt-map]').forEach(el => {
+							const oldMapElement = document.querySelector('[data-adt-map]');
+							if (oldMapElement && oldMapElement !== el && mapInstances.has(oldMapElement)) {
+								mapInstances.get(oldMapElement).remove();
+								mapInstances.delete(oldMapElement);
+							}
+							applyEventHandlers(el);
+						});
 					}
 				});
 			}
@@ -823,14 +844,14 @@ function addDepotMarker(map, position, depotType) {
 }
 
 function getSelectedMarkers(mapElement) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	if (!map) return [];
 	const order = selectionOrder.get(map);
 	return Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
 }
 
 function clearSelection(mapElement) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	if (!map) return;
 	const selected = selectedMarkers.get(map);
 	const order = selectionOrder.get(map);
@@ -843,7 +864,7 @@ function clearSelection(mapElement) {
 }
 
 async function toggleMarker(mapElement, markerId, selected, recalculate = true) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
 	if (!marker) return;
@@ -872,7 +893,7 @@ async function toggleMarker(mapElement, markerId, selected, recalculate = true) 
 
 function setOrder(mapElement, markerId, orderNumber) {
 	let color = null;
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	const settings = $(mapElement).data('adt-map');
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
@@ -884,19 +905,19 @@ function setOrder(mapElement, markerId, orderNumber) {
 }
 
 function onBeforeRouteCalculation(mapElement, callbackName) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	if (!map) return;
 	onBeforeRouteCalculationMap.set(map, callbackName);
 }
 
 function onAfterRouteCalculation(mapElement, callbackName) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	if (!map) return;
 	onAfterRouteCalculationMap.set(map, callbackName);
 }
 
 function recalculateRoute(mapElement) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 
 	if (!map) return;
 
@@ -904,7 +925,7 @@ function recalculateRoute(mapElement) {
 }
 
 function removeMarker(mapElement, markerId, recalculate = true) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 	if (!map) return;
 
 	const markers = markerInstances.get(map);
@@ -940,7 +961,7 @@ function removeMarker(mapElement, markerId, recalculate = true) {
 }
 
 function addMarkerAndSelect(mapElement, markerData, recalculate = true) {
-	const map = mapInstances.get(mapElement);
+	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
 
 	if (!map) return;
 
