@@ -375,7 +375,11 @@ function addMarkers(map, markers, options, selectedOptions, position, selectable
 	}
 
 	if (!position.length && positionsOfMarkers.length) {
-		map.fitBounds(positionsOfMarkers);
+		const rs = routeSettingsMap.get(map);
+		const allBounds = [...positionsOfMarkers];
+		if (rs?.startPoint) allBounds.push([rs.startPoint.lat, rs.startPoint.lon]);
+		if (rs?.endPoint) allBounds.push([rs.endPoint.lat, rs.endPoint.lon]);
+		map.fitBounds(allBounds);
 	}
 	map.addLayer(cluster);
 
