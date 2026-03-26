@@ -195,6 +195,13 @@ async function run(options) {
 			};
 		}
 
+		if (!routeSettings.enabled) {
+			const hasCustomStart = routeSettings.startPoint !== null && routeSettings.startPoint !== undefined;
+			const hasCustomEnd = routeSettings.endPoint !== null && routeSettings.endPoint !== undefined;
+			if (hasCustomStart) addDepotMarker(map, routeSettings.startPoint, DEPOT_TYPE.START);
+			if (hasCustomEnd) addDepotMarker(map, routeSettings.endPoint, DEPOT_TYPE.END);
+		}
+
 		if (routeSettings.enabled) {
 			calculateRoute(map);
 		}
@@ -416,7 +423,11 @@ async function applyPreselectedMarkersVisualOnly(map, markersData) {
 }
 
 function createMarker(marker, options, selectedOptions, cluster = null, selectable = false, onSelectionChange = null, map = null, showSelectionOrder = false, markerInfoCallback = null) {
-	const mapMarker = L.marker(marker.position, {...options, id: marker.id});
+	const markerOpts = {...options, id: marker.id};
+	if (marker.opacity !== undefined) {
+		markerOpts.opacity = marker.opacity;
+	}
+	const mapMarker = L.marker(marker.position, markerOpts);
 	mapMarker._normalIcon = options.icon;
 	mapMarker._selectedIcon = selectedOptions.icon;
 	mapMarker._markerData = marker;
