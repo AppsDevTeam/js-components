@@ -396,16 +396,23 @@ function checkAndApplyPreselection(map, markers, showSelectionOrder, onSelection
 	}
 }
 
-function applyPreselectedMarkersVisualOnly(map, markersData) {
+async function applyPreselectedMarkersVisualOnly(map, markersData) {
 	const markerMap = markerInstances.get(map);
+	const settings = routeSettingsMap.get(map);
 	const preselected = markersData.filter(m => m.selected === true);
 
-	preselected.forEach((markerData) => {
+	for (const markerData of preselected) {
 		const markerInstance = markerMap.get(markerData.id);
 		if (markerInstance && markerInstance._selectedIcon) {
-			markerInstance.setIcon(markerInstance._selectedIcon);
+			if (settings && settings.color) {
+				const iconUrl = markerInstance._selectedIcon.options.iconUrl;
+				const newIcon = await createMarkerIcon(map, iconUrl, null);
+				markerInstance.setIcon(newIcon);
+			} else {
+				markerInstance.setIcon(markerInstance._selectedIcon);
+			}
 		}
-	});
+	}
 }
 
 function createMarker(marker, options, selectedOptions, cluster = null, selectable = false, onSelectionChange = null, map = null, showSelectionOrder = false, markerInfoCallback = null) {
@@ -570,7 +577,7 @@ async function updateMarkerOrderDisplay(map, marker, orderNumber, isSelected, co
 async function createMarkerIcon(map, iconUrl, orderNumber, color = null) {
 	let inlineStyle = null;
 	const settings = routeSettingsMap.get(map);
-	if ((settings && settings.enabled) || color) {
+	if ((settings && settings.color) || color) {
 		inlineStyle = `--marker-fill: ${color ?? settings.color};`;
 	}
 
