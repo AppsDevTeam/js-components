@@ -10,6 +10,30 @@ const init = (selector, path) => {
 		componentsConfig = JSON.parse(bodyDataset);
 	}
 
+	const runPath = (path, selector) => {
+		if (path.startsWith('~')) {
+			import('~/src/' + path.slice(1) + '/index.js').then(component => {
+				component.default.run(componentsConfig[selector] || {});
+			});
+		} else if (path.includes('/')) {
+			import('JsComponents/' + path + '/index.js').then(component => {
+				component.default.run(componentsConfig[selector] || {});
+			});
+		} else {
+			import('adt-js-components/src/' + path + '/index.js').then(component => {
+				component.default.run(componentsConfig[selector] || {});
+			});
+		}
+	};
+
+	const existingTarget = document.querySelector(`[data-adt-${selector}]`);
+	if (existingTarget && !loadedComponents.includes(path)) {
+		loadedComponents.push(path);
+		typeof path === 'function'
+			? path(componentsConfig[selector] || {})
+			: runPath(path, selector);
+	}
+
 	const observer = new MutationObserver((mutationsList) => {
 		// component is already loaded
 		if (loadedComponents.includes(path)) return;
@@ -21,20 +45,10 @@ const init = (selector, path) => {
 				if (target) {
 					loadedComponents.push(path);
 
-					if (path.startsWith('~')) {
-						import('~/src/' + path.slice(1) + '/index.js').then(component => {
-							component.default.run(componentsConfig[selector] || {});
-						});
-
-					} else if (path.includes('/')) {
-						import('JsComponents/' + path + '/index.js').then(component => {
-							component.default.run(componentsConfig[selector] || {});
-						});
-
+					if (typeof path === 'function') {
+						path(componentsConfig[selector] || {});
 					} else {
-						import('adt-js-components/src/' + path + '/index.js').then(component => {
-							component.default.run(componentsConfig[selector] || {});
-						});
+						runPath(path, selector);
 					}
 					break;
 				}
