@@ -5,13 +5,25 @@ const run = (config) => {
     const $disableBtn = $('[data-adt-notifications-disable]');
 
     const updateButtons = () => {
-        if (Notification.permission === 'granted') {
-            $enableBtn.hide();
-            $disableBtn.show();
-        } else {
+        if (Notification.permission !== 'granted') {
             $enableBtn.show();
             $disableBtn.hide();
+            return;
         }
+
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            var hasFirebaseSw = registrations.some(function (registration) {
+                return registration.active && registration.active.scriptURL.includes('firebase-messaging-sw');
+            });
+
+            if (hasFirebaseSw) {
+                $enableBtn.hide();
+                $disableBtn.show();
+            } else {
+                $enableBtn.show();
+                $disableBtn.hide();
+            }
+        });
     };
 
     // Enable notifications
