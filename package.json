@@ -25,7 +25,9 @@
     "tinymce-i18n": "^20.12.25",
     "nette.ajax.js": "^2.3.0",
     "leaflet": "^1.9.4",
-    "leaflet.markercluster": "^1.5.3"
+    "leaflet.markercluster": "^1.5.3",
+    "firebase": "^12.10.0",
+    "@firebase/messaging": "^0.12.24"
   },
   "peerDependencies": {
     "jquery": "^3.4.1"
