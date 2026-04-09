@@ -1,10 +1,13 @@
 import { getToken, deleteToken } from "firebase/messaging";
 
-const run = (config) => {
-    const $enableBtn = $('[data-adt-notifications-enable]');
-    const $disableBtn = $('[data-adt-notifications-disable]');
+const ENABLE_SELECTOR = '[data-adt-notifications-enable]';
+const DISABLE_SELECTOR = '[data-adt-notifications-disable]';
 
+const run = (config) => {
     const updateButtons = () => {
+        const $enableBtn = $(ENABLE_SELECTOR);
+        const $disableBtn = $(DISABLE_SELECTOR);
+
         if (Notification.permission !== 'granted') {
             $enableBtn.show();
             $disableBtn.hide();
@@ -27,7 +30,7 @@ const run = (config) => {
     };
 
     // Enable notifications
-    $enableBtn.on('click', function () {
+    $(document).on('click', ENABLE_SELECTOR, function () {
         if (window.messaging) {
             Notification.requestPermission().then(function (permission) {
                 if (permission !== 'granted') {
@@ -58,7 +61,7 @@ const run = (config) => {
     });
 
     // Disable notifications
-    $disableBtn.on('click', function () {
+    $(document).on('click', DISABLE_SELECTOR, function () {
         if (window.messaging) {
             deleteToken(window.messaging)
                 .then(function () {
@@ -100,6 +103,10 @@ const run = (config) => {
     } else {
         updateButtons();
     }
+
+    $(document).on('ajaxComplete', function () {
+        updateButtons();
+    });
 }
 
 export default { run };
