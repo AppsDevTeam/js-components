@@ -1,6 +1,52 @@
 const loadedComponents = [];
 let componentsConfig = {};
 
+// Component module resolution (Vite only).
+//
+// Rollup/Vite cannot statically analyse concatenated dynamic imports, so callers
+// register `import.meta.glob()` maps that this loader resolves from. Maps are
+// MERGED per scope, so multiple callers can contribute — e.g. FancyAdmin registers
+// its own components ('fancyadmin'), while the consuming app registers its own
+// ('app') and the built-ins it uses ('builtin'):
+//   AdtJsComponents.registerModules({
+//     app:     import.meta.glob('.../app/UI/**/index.js'),
+//     builtin: import.meta.glob('.../node_modules/adt-js-components/src/{Select2,...}/index.js'),
+//   });
+const registeredModules = { fancyadmin: {}, app: {}, builtin: {} };
+
+const registerModules = (maps) => {
+	for (const scope of Object.keys(maps)) {
+		registeredModules[scope] = Object.assign(registeredModules[scope] || {}, maps[scope]);
+	}
+};
+
+// Find the loader in a glob map whose key resolves to the requested sub-path.
+// Match on a leading-slash boundary so e.g. "Map" never matches "Sitemap".
+const resolveFromMap = (map, subPath) => {
+	if (!map) return null;
+	const needle = subPath + '/index.js';
+	const key = Object.keys(map).find((k) => k === needle || k.endsWith('/' + needle));
+	return key ? map[key] : null;
+};
+
+// Returns a Promise<module> for the given component path, resolved from the
+// registered import.meta.glob() maps.
+const importComponent = (path) => {
+	let loader;
+	if (path.startsWith('~')) {
+		loader = resolveFromMap(registeredModules.fancyadmin, path.slice(1));
+	} else if (path.includes('/')) {
+		loader = resolveFromMap(registeredModules.app, path);
+	} else {
+		loader = resolveFromMap(registeredModules.builtin, path);
+	}
+
+	if (!loader) {
+		return Promise.reject(new Error(`adt-js-components: component "${path}" not found in registered modules.`));
+	}
+	return loader();
+};
+
 const init = (selector, path) => {
 	let bodyDataset = document.querySelector(`body`).dataset.adtJsComponents;
 
@@ -11,19 +57,14 @@ const init = (selector, path) => {
 	}
 
 	const runPath = (path, selector) => {
-		if (path.startsWith('~')) {
-			import('~/src/' + path.slice(1) + '/index.js').then(component => {
+		importComponent(path)
+			.then(component => {
 				component.default.run(componentsConfig[selector] || {});
+			})
+			.catch(err => {
+				// Don't let a single missing/optional component break page init.
+				console.warn(`adt-js-components: failed to load component "${path}":`, err);
 			});
-		} else if (path.includes('/')) {
-			import('JsComponents/' + path + '/index.js').then(component => {
-				component.default.run(componentsConfig[selector] || {});
-			});
-		} else {
-			import('adt-js-components/src/' + path + '/index.js').then(component => {
-				component.default.run(componentsConfig[selector] || {});
-			});
-		}
 	};
 
 	const existingTarget = document.querySelector(`[data-adt-${selector}]`);
@@ -135,6 +176,7 @@ export const loadScssModule = (styles) => {
 
 export default {
 	init,
+	registerModules,
 	initCurrencyInput,
 	initDateInput,
 	initGLightbox,
