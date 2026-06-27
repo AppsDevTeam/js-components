@@ -1,4 +1,4 @@
-const Scrollparent = require("scrollparent");
+import Scrollparent from "scrollparent";
 
 function isList(el) {
 	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio';

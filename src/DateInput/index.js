@@ -1,10 +1,24 @@
 import flatpickr from "flatpickr";
 import 'flatpickr/dist/flatpickr.min.css';
 
-import 'script-loader!timepicker';
+// timepicker is a jQuery plugin attaching to the global $ (provided by the bundler).
+// Plain side-effect import works in both webpack and Vite; the "script-loader!" prefix
+// was webpack-only and unresolvable in Vite/Rollup.
+import 'timepicker';
 import 'timepicker/jquery.timepicker.min.css';
 
 const locale = document.querySelector('html').getAttribute('lang');
+
+// flatpickr locale modules, resolved lazily (Vite). Replaces the webpack-only
+// dynamic require('flatpickr/dist/l10n/' + locale + '.js').
+const flatpickrLocales = import.meta.glob('../../../flatpickr/dist/l10n/*.js');
+
+async function loadFlatpickrLocale(loc) {
+	const key = Object.keys(flatpickrLocales).find((k) => k.endsWith(`/l10n/${loc}.js`));
+	if (!key) return null;
+	const mod = await flatpickrLocales[key]();
+	return mod.default[loc];
+}
 
 function initTime(input, options) {
 	$(input).timepicker({
@@ -24,11 +38,13 @@ async function initDate(input, options) {
 		options.locale = locale;
 	}
 
+	const localeData = options.locale ? await loadFlatpickrLocale(options.locale) : null;
+
 	flatpickr(input, {
 		dateFormat: options.format, // default datetime-local
 		enableTime: options.type === 'datetime' || options.type === 'datetime-local',
 		time_24hr: true,
-		locale: options.locale ? require('flatpickr/dist/l10n/' + options.locale + '.js').default[options.locale] : null,
+		locale: localeData,
 		defaultDate: options.value ? new Date(options.value) : null,
 		minDate: options.minDate ? new Date(options.minDate) : null,
 		maxDate: options.maxDate ? new Date(options.maxDate) : null,

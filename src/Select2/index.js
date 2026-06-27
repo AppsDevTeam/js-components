@@ -1,7 +1,7 @@
-import 'select2/dist/js/select2.full';
+// Initializes $.fn.select2 against the global jQuery, then loads its i18n locale.
+import './_init';
 import 'select2/dist/css/select2.min.css';
 import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
-import 'select2/dist/js/i18n/cs'
 
 function run(options) {
 	const noSelect2Class = '.select-default';
