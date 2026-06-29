@@ -4,7 +4,7 @@ import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { decode as decodeFlexPolyline } from '@here/flexpolyline';
-import {RouteSetting, defaultRouteSettings} from './route.types.js';
+import {defaultRouteSettings} from './route.types.js';
 
 let siteKey;
 let markerImg;
