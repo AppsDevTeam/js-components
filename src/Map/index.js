@@ -23,6 +23,7 @@ const onSelectionChangeMap = new WeakMap();
 const onBeforeRouteCalculationMap = new WeakMap();
 const onAfterRouteCalculationMap = new WeakMap();
 const disableClickZoomMap = new WeakMap();
+const disableClusteringMap = new WeakMap();
 const cachedRouteLoaded = new WeakMap();
 
 const DEPOT_TYPE = {
@@ -56,7 +57,8 @@ async function run(options) {
 			markerInfoCallback = null,
 			onBeforeRouteCalculation = null,
 			onAfterRouteCalculation = null,
-			disableClickZoom = false
+			disableClickZoom = false,
+			disableClustering = false
 		} = JSON.parse(el.dataset.adtMap);
 
 		/** @type {RouteSetting} */
@@ -91,6 +93,7 @@ async function run(options) {
 		onBeforeRouteCalculationMap.set(map, onBeforeRouteCalculation);
 		onAfterRouteCalculationMap.set(map, onAfterRouteCalculation);
 		disableClickZoomMap.set(map, disableClickZoom);
+		disableClusteringMap.set(map, disableClustering);
 
 		if (mapProvider === MAP_PROVIDER.HERE) {
 			L.tileLayer(
@@ -334,21 +337,23 @@ function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 
 function addMarkers(map, markers, options, selectedOptions, position, selectable, onSelectionChange, showSelectionOrder, markerInfoCallback) {
 	const positionsOfMarkers = [];
-	const cluster = L.markerClusterGroup({
-		disableClusteringAtZoom: 18,
-		spiderfyOnMaxZoom: true,
-		showCoverageOnHover: false,
-		zoomToBoundsOnClick: true,
-		iconCreateFunction: function (cluster) {
-			const childCount = cluster.getChildCount();
-			const c = childCount < 10 ? 'small' : childCount < 100 ? 'medium' : 'large';
-			return new L.DivIcon({
-				html: '<div><span>' + childCount + '</span></div>',
-				className: 'marker-cluster marker-cluster-' + c,
-				iconSize: new L.Point(40, 40)
-			});
-		}
-	});
+	const cluster = disableClusteringMap.get(map)
+		? L.layerGroup()
+		: L.markerClusterGroup({
+			disableClusteringAtZoom: 18,
+			spiderfyOnMaxZoom: true,
+			showCoverageOnHover: false,
+			zoomToBoundsOnClick: true,
+			iconCreateFunction: function (cluster) {
+				const childCount = cluster.getChildCount();
+				const c = childCount < 10 ? 'small' : childCount < 100 ? 'medium' : 'large';
+				return new L.DivIcon({
+					html: '<div><span>' + childCount + '</span></div>',
+					className: 'marker-cluster marker-cluster-' + c,
+					iconSize: new L.Point(40, 40)
+				});
+			}
+		});
 
 	markerClusters.set(map, cluster);
 	let loadedCount = 0;
@@ -903,7 +908,7 @@ async function toggleMarker(mapElement, markerId, selected, recalculate = true) 
 	}
 
 	const cluster = markerClusters.get(map);
-	if (cluster) {
+	if (cluster && typeof cluster.refreshClusters === 'function') {
 		cluster.refreshClusters(marker);
 	}
 
