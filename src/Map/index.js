@@ -416,9 +416,9 @@ async function applyPreselectedMarkersVisualOnly(map, markersData) {
 	for (const markerData of preselected) {
 		const markerInstance = markerMap.get(markerData.id);
 		if (markerInstance && markerInstance._selectedIcon) {
-			if (settings && settings.color) {
+			if ((settings && settings.color) || markerData.iconStyle) {
 				const iconUrl = markerInstance._selectedIcon.options.iconUrl;
-				const newIcon = await createMarkerIcon(map, iconUrl, null);
+				const newIcon = await createMarkerIcon(map, iconUrl, null, null, markerData.iconStyle);
 				markerInstance.setIcon(newIcon);
 			} else {
 				markerInstance.setIcon(markerInstance._selectedIcon);
@@ -547,7 +547,7 @@ async function selectMarker(marker, map, showSelectionOrder) {
 	}
 
 	if (showSelectionOrder) {
-		const newIcon = await createMarkerIcon(map, marker.options.icon.options.iconUrl, newOrder);
+		const newIcon = await createMarkerIcon(map, marker.options.icon.options.iconUrl, newOrder, null, marker._markerData?.iconStyle);
 		marker.setIcon(newIcon);
 	}
 }
@@ -586,15 +586,18 @@ function deselectMarker(marker, map, showSelectionOrder) {
 async function updateMarkerOrderDisplay(map, marker, orderNumber, isSelected, color = null) {
 	if (!marker._normalIcon || !marker._normalIcon.options) return;
 	const iconUrl = isSelected && marker._selectedIcon ? marker._selectedIcon.options.iconUrl : marker._normalIcon.options.iconUrl;
-	const newIcon = await createMarkerIcon(map, iconUrl, orderNumber, color);
+	const newIcon = await createMarkerIcon(map, iconUrl, orderNumber, color, marker._markerData?.iconStyle);
 	marker.setIcon(newIcon);
 }
 
-async function createMarkerIcon(map, iconUrl, orderNumber, color = null) {
-	let inlineStyle = null;
+async function createMarkerIcon(map, iconUrl, orderNumber, color = null, iconStyle = null) {
+	let inlineStyle = '';
 	const settings = routeSettingsMap.get(map);
 	if ((settings && settings.color) || color) {
 		inlineStyle = `--marker-fill: ${color ?? settings.color};`;
+	}
+	if (iconStyle) {
+		inlineStyle += iconStyle;
 	}
 
 	let svg;
