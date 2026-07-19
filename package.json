@@ -29,8 +29,7 @@
     "tinymce-i18n": "^20.12.25",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "firebase": "^12.10.0",
-    "@firebase/messaging": "^0.12.24"
+    "firebase": "^12.10.0"
   },
   "peerDependenciesMeta": {
     "select2": { "optional": true },
@@ -47,8 +46,7 @@
     "tinymce-i18n": { "optional": true },
     "leaflet": { "optional": true },
     "leaflet.markercluster": { "optional": true },
-    "firebase": { "optional": true },
-    "@firebase/messaging": { "optional": true }
+    "firebase": { "optional": true }
   },
   "author": "Apps Dev Team",
   "license": "MIT",
