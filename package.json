@@ -11,6 +11,10 @@
     "url": "git+https://github.com/AppsDevTeam/js-components.git"
   },
   "dependencies": {
+    "nette.ajax.js": "^2.3.0"
+  },
+  "peerDependencies": {
+    "jquery": "^3.4.1",
     "select2": "^4.0.13",
     "select2-bootstrap-5-theme": "^1.1.1",
     "autonumeric": "^4.6.0",
@@ -23,14 +27,26 @@
     "scrollparent": "^2.0.1",
     "tinymce": "^5.7.0",
     "tinymce-i18n": "^20.12.25",
-    "nette.ajax.js": "^2.3.0",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "firebase": "^12.10.0",
-    "@firebase/messaging": "^0.12.24"
+    "firebase": "^12.10.0"
   },
-  "peerDependencies": {
-    "jquery": "^3.4.1"
+  "peerDependenciesMeta": {
+    "select2": { "optional": true },
+    "select2-bootstrap-5-theme": { "optional": true },
+    "autonumeric": { "optional": true },
+    "@here/flexpolyline": { "optional": true },
+    "flatpickr": { "optional": true },
+    "script-loader": { "optional": true },
+    "timepicker": { "optional": true },
+    "glightbox": { "optional": true },
+    "@googlemaps/js-api-loader": { "optional": true },
+    "scrollparent": { "optional": true },
+    "tinymce": { "optional": true },
+    "tinymce-i18n": { "optional": true },
+    "leaflet": { "optional": true },
+    "leaflet.markercluster": { "optional": true },
+    "firebase": { "optional": true }
   },
   "author": "Apps Dev Team",
   "license": "MIT",
