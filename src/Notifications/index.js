@@ -88,18 +88,48 @@ const run = (config) => {
         updateButtons();
     });
 
-    // Initial state: check if notifications are already enabled
-    if (Notification.permission === 'granted' && window.messaging) {
-        getToken(window.messaging, { vapidKey: config.vapidKey })
-            .then(function (currentToken) {
-                if (currentToken) {
-                    window.adtNotificationsToken = currentToken;
+    // window.messaging se inicializuje async v Messaging komponentě, která nemusí
+    // doběhnout dřív než tento init (typicky po F5). Počkáme na ni, jinak by se
+    // getToken nikdy nezavolal a window.adtNotificationsToken by zůstal nenastavený.
+    var waitForMessaging = function (timeoutMs) {
+        return new Promise(function (resolve) {
+            if (window.messaging) {
+                resolve(window.messaging);
+                return;
+            }
+            var elapsed = 0;
+            var step = 100;
+            var interval = setInterval(function () {
+                if (window.messaging) {
+                    clearInterval(interval);
+                    resolve(window.messaging);
+                } else if ((elapsed += step) >= timeoutMs) {
+                    clearInterval(interval);
+                    resolve(null);
                 }
+            }, step);
+        });
+    };
+
+    // Initial state: check if notifications are already enabled
+    if (Notification.permission === 'granted') {
+        waitForMessaging(5000).then(function (messaging) {
+            if (!messaging) {
                 updateButtons();
-            })
-            .catch(function () {
-                updateButtons();
-            });
+                return;
+            }
+
+            getToken(messaging, { vapidKey: config.vapidKey })
+                .then(function (currentToken) {
+                    if (currentToken) {
+                        window.adtNotificationsToken = currentToken;
+                    }
+                    updateButtons();
+                })
+                .catch(function () {
+                    updateButtons();
+                });
+        });
     } else {
         updateButtons();
     }
