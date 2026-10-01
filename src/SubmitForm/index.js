@@ -8,6 +8,30 @@ function getErrorElementId(el) {
 	return isList(el) ? el.id.split('-').slice(0, -1).join('-') : el.id;
 }
 
+function toggleInvalid(el, invalid) {
+	el.classList.toggle('is-invalid', invalid);
+	// because of radio lists and checkbox lists
+	if (isList(el)) {
+		el.parentNode.classList.toggle('is-invalid', invalid);
+	}
+	// because of https://github.com/twbs/bootstrap/issues/25110
+	if (el.parentNode.classList.contains('input-group')) {
+		el.parentNode.classList.toggle('has-validation', invalid);
+		el.parentNode.classList.toggle('is-invalid', invalid);
+	}
+}
+
+function hasErrors(errorElement) {
+	return Array.from(errorElement.childNodes).some(node => node.nodeName !== 'SCRIPT' && node.textContent.trim() !== '');
+}
+
+function markErrorsFor(errorElement) {
+	const el = document.getElementById(errorElement.getAttribute('data-adt-errors-for'));
+	if (el && el.tagName !== 'FORM') {
+		toggleInvalid(el, hasErrors(errorElement));
+	}
+}
+
 function scrollToFirstError(form) {
 	const el = $(form).find('.alert-danger:first, .is-invalid:first')[0];
 
@@ -28,10 +52,17 @@ function run(options) {
 			if (isList(this)) {
 				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
 			}
+			if (this.parentNode.classList.contains('input-group')) {
+				this.parentNode.classList.remove('is-invalid');
+			}
 		});
 	}
 
 	$.nette.ext('live').after(function($el) {
+		$el.find('[data-adt-errors-for]').addBack('[data-adt-errors-for]').each(function() {
+			markErrorsFor(this);
+		});
+
 		window.addEventListener('pageshow', (e) => {
 			if (e.persisted) {
 				$el.find('[data-adt-submit-form]').each(function(e) {
@@ -85,15 +116,7 @@ function run(options) {
 					errorElement.innerHTML += `<div>${error.message}</div>`;
 				}
 
-				error.element.classList.add('is-invalid');
-				// because of radio lists and checkbox lists
-				if (isList(error.element)) {
-					error.element.parentNode.classList.add('is-invalid');
-				}
-				// because of https://github.com/twbs/bootstrap/issues/25110
-				if (error.element.parentNode.classList.contains('input-group')) {
-					error.element.parentNode.classList.add('has-validation');
-				}
+				toggleInvalid(error.element, true);
 			}
 
 			if (errors.length) {
