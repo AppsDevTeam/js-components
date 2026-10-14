@@ -178,7 +178,9 @@ function run(options) {
 		},
 		error: function (xhr, status, error, settings) {
 			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				settings.nette.form.prepend('<div class="alert alert-danger">' + xhr.responseText + '</div>');
+				if (status !== 'abort') {
+					settings.nette.form.prepend('<div class="alert alert-danger">' + xhr.responseText + '</div>');
+				}
 
 				settings.nette.el.html(settings.nette.el.data('originalContent'));
 				settings.nette.form.data('enabledButtons').each(function () {
