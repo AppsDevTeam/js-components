@@ -107,26 +107,100 @@ function run(options) {
 		this.$originalElement.select2('destroy');
 	};
 
-	function applyEventHandlers(el) {
-		new AjaxSelect($(el));
+	/**
+	 * Lazy initialization.
+	 *
+	 * Building select2 reads computed styles and layout (e.g. the mousewheel plugin bundled
+	 * in select2.full measures the line height of every results list). Right after the
+	 * previous select2 was inserted, each such read forces the browser to lay out the whole
+	 * page again, so initializing many selects at once gets quadratically slower - a form
+	 * with 300 rows took tens of seconds.
+	 *
+	 * Selects that are visible (or close to the viewport) are therefore initialized right
+	 * away and the rest only when they are about to scroll into view. Visibility of all newly
+	 * added selects is read in one pass before any of them is initialized, so the page is laid
+	 * out once, not once per select. A select that is not initialized yet is initialized on
+	 * focus as well (e.g. when the user tabs into it).
+	 */
+	const VISIBILITY_MARGIN = 200;
+
+	function initialize(el) {
+		if (el.adtAjaxSelect) {
+			return;
+		}
+		el.adtAjaxSelect = new AjaxSelect($(el));
+	}
+
+	const visibilityObserver = 'IntersectionObserver' in window
+		? new IntersectionObserver(entries => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting) {
+					visibilityObserver.unobserve(entry.target);
+					entry.target.removeEventListener('focus', initializeOnFocus);
+					initialize(entry.target);
+				}
+			});
+		}, { rootMargin: VISIBILITY_MARGIN + 'px' })
+		: null;
+
+	function initializeOnFocus(e) {
+		const el = e.currentTarget;
+		el.removeEventListener('focus', initializeOnFocus);
+		visibilityObserver.unobserve(el);
+		initialize(el);
+		$(el).data('select2')?.$selection.trigger('focus');
+	}
+
+	function isNearViewport(rect) {
+		// zero size = not rendered (display: none), it will be initialized once it shows up
+		return (rect.width > 0 || rect.height > 0)
+			&& rect.bottom >= -VISIBILITY_MARGIN
+			&& rect.top <= window.innerHeight + VISIBILITY_MARGIN
+			&& rect.right >= -VISIBILITY_MARGIN
+			&& rect.left <= window.innerWidth + VISIBILITY_MARGIN;
+	}
+
+	function applyEventHandlers(elements) {
+		elements = elements.filter(el => !el.adtAjaxSelect);
+
+		if (!visibilityObserver) {
+			elements.forEach(initialize);
+			return;
+		}
+
+		// read all rects first (one layout), only then start building select2
+		const rects = elements.map(el => el.getBoundingClientRect());
+
+		elements.forEach((el, i) => {
+			if (isNearViewport(rects[i])) {
+				initialize(el);
+			} else {
+				visibilityObserver.observe(el);
+				el.addEventListener('focus', initializeOnFocus);
+			}
+		});
 	}
 
 	const observer = new MutationObserver(mutations => {
+		const elements = [];
+
 		mutations.forEach(mutation => {
 			if (mutation.type === "childList") {
 				mutation.addedNodes.forEach(node => {
 					if (node.nodeType === 1) {
 						if (node.hasAttribute("data-adt-ajax-select")) {
-							applyEventHandlers(node);
+							elements.push(node);
 						}
 
-						node.querySelectorAll('[data-adt-ajax-select]').forEach(child => {
-							applyEventHandlers(child);
-						});
+						elements.push(...node.querySelectorAll('[data-adt-ajax-select]'));
 					}
 				});
 			}
 		});
+
+		if (elements.length) {
+			applyEventHandlers(elements);
+		}
 	});
 
 	observer.observe(document.body, {
@@ -134,9 +208,7 @@ function run(options) {
 		subtree: true,
 	});
 
-	document.querySelectorAll('[data-adt-ajax-select]').forEach(function(el) {
-		applyEventHandlers(el);
-	});
+	applyEventHandlers([...document.querySelectorAll('[data-adt-ajax-select]')]);
 }
 
 export default { run }
