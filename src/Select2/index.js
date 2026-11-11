@@ -8,6 +8,14 @@ function run(options) {
 	const selector = options.selector || 'select:not(' + noSelect2Class + ')';
 
 	function applyEventHandlers(el) {
+		// AJAX selects are initialized by the AjaxSelect component with their own options.
+		// Initializing them here as well would build select2 twice and AjaxSelect would
+		// rebuild it right away. Each initialization reads computed styles, which is the
+		// most expensive part of rendering a form with many selects.
+		if (el.matches('[data-adt-ajax-select]')) {
+			return;
+		}
+
 		$(el)
 			.select2($.extend({theme: 'bootstrap-5', language: "en"}, $(el).data('adt-select2') || {}))
 			.on('change', function(e) {
