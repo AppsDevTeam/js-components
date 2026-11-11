@@ -121,8 +121,13 @@ function run(options) {
 	 * added selects is read in one pass before any of them is initialized, so the page is laid
 	 * out once, not once per select. A select that is not initialized yet is initialized on
 	 * focus as well (e.g. when the user tabs into it).
+	 *
+	 * A few selects added at once (a row added by a replicator) are always initialized right
+	 * away - that is cheap, and the code that added the row may call select2('open') on it,
+	 * even when the row ended up at the end of a long list out of the viewport.
 	 */
 	const VISIBILITY_MARGIN = 200;
+	const EAGER_LIMIT = 10;
 
 	function initialize(el) {
 		if (el.adtAjaxSelect) {
@@ -163,7 +168,7 @@ function run(options) {
 	function applyEventHandlers(elements) {
 		elements = elements.filter(el => !el.adtAjaxSelect);
 
-		if (!visibilityObserver) {
+		if (!visibilityObserver || elements.length <= EAGER_LIMIT) {
 			elements.forEach(initialize);
 			return;
 		}
