@@ -1,6 +1,12 @@
 /* the bootstrap-5 theme stretches Select2 in an .input-group, keep the width of a select marked with .flex-grow-0 */
 .input-group > .select2-hidden-accessible.flex-grow-0 + .select2-container--bootstrap-5 {
 	flex-grow: 0;
+	width: auto !important;
+}
+
+/* projects override the padding of .select2-selection (e.g. fancyadmin), keep the room for the arrow when sized by content */
+.input-group > .select2-hidden-accessible.flex-grow-0 + .select2-container--bootstrap-5 .select2-selection--single {
+	padding-right: 2.25rem !important;
 }
 
 /* the hidden select stays the first child, so Bootstrap would shift the visible Select2 out of the group */
