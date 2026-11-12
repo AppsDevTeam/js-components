@@ -1,0 +1,9 @@
+/* the bootstrap-5 theme stretches Select2 in an .input-group, keep the width of a select marked with .flex-grow-0 */
+.input-group > .select2-hidden-accessible.flex-grow-0 + .select2-container--bootstrap-5 {
+	flex-grow: 0;
+}
+
+/* the hidden select stays the first child, so Bootstrap would shift the visible Select2 out of the group */
+.input-group > .select2-hidden-accessible:first-child + .select2-container--bootstrap-5 {
+	margin-left: 0 !important;
+}

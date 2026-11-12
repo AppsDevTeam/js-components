@@ -2,6 +2,7 @@
 import './_init';
 import 'select2/dist/css/select2.min.css';
 import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
+import './input-group.css';
 
 function run(options) {
 	const noSelect2Class = '.select-default';
