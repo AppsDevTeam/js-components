@@ -3,6 +3,11 @@ import { getToken, deleteToken } from "firebase/messaging";
 const ENABLE_SELECTOR = '[data-adt-notifications-enable]';
 const DISABLE_SELECTOR = '[data-adt-notifications-disable]';
 
+// Vypnutí notifikací platí per prohlížeč (stejně jako token). Oprávnění
+// v prohlížeči zůstává "granted", takže bez tohoto flagu by tichý sync
+// po dalším načtení stránky token znovu vygeneroval a notifikace zapnul.
+const OPT_OUT_KEY = 'adtNotificationsOptOut';
+
 const run = (config) => {
     const updateButtons = () => {
         const $enableBtn = $(ENABLE_SELECTOR);
@@ -31,6 +36,8 @@ const run = (config) => {
 
     // Enable notifications
     $(document).on('click', ENABLE_SELECTOR, function () {
+        localStorage.removeItem(OPT_OUT_KEY);
+
         if (window.messaging) {
             Notification.requestPermission().then(function (permission) {
                 if (permission !== 'granted') {
@@ -62,30 +69,45 @@ const run = (config) => {
 
     // Disable notifications
     $(document).on('click', DISABLE_SELECTOR, function () {
-        if (window.messaging) {
-            deleteToken(window.messaging)
+        var currentToken = window.adtNotificationsToken;
+
+        localStorage.setItem(OPT_OUT_KEY, '1');
+
+        var cleanup = window.messaging
+            ? deleteToken(window.messaging)
                 .then(function () {
-                    // Unregister service worker
                     return navigator.serviceWorker.getRegistrations();
                 })
                 .then(function (registrations) {
-                    registrations.forEach(function (registration) {
-                        if (registration.active && registration.active.scriptURL.includes('firebase-messaging-sw')) {
-                            registration.unregister();
-                        }
-                    });
+                    return Promise.all(registrations
+                        .filter(function (registration) {
+                            return registration.active && registration.active.scriptURL.includes('firebase-messaging-sw');
+                        })
+                        .map(function (registration) {
+                            return registration.unregister();
+                        }));
                 })
                 .catch(function (err) {
                     console.error(err);
-                });
-        }
+                })
+            : Promise.resolve();
 
+        // maže se jen token tohoto prohlížeče - vypnutí nesmí odhlásit
+        // notifikace uživatele na jeho ostatních prohlížečích/zařízeních
         $.nette.ajax({
-            url: config.removeAllFirebaseTokensLink
+            url: currentToken && config.removeFirebaseTokenLink
+                ? config.removeFirebaseTokenLink.replace('__firebaseToken__', currentToken)
+                : config.removeAllFirebaseTokensLink
         });
 
         window.adtNotificationsToken = null;
-        updateButtons();
+
+        // updateButtons až po dokončení odregistrace service workeru - AJAX
+        // (a jeho ajaxComplete -> updateButtons) jinak stihne doběhnout dřív,
+        // uvidí ještě zaregistrovaný SW a tlačítka vrátí do stavu "zapnuto"
+        cleanup.then(function () {
+            updateButtons();
+        });
     });
 
     // window.messaging se inicializuje async v Messaging komponentě, která nemusí
@@ -111,8 +133,10 @@ const run = (config) => {
         });
     };
 
-    // Initial state: check if notifications are already enabled
-    if (Notification.permission === 'granted') {
+    // Initial state: s uděleným oprávněním funguje getToken() bez user interaction
+    // (chybějící token vygeneruje vč. registrace service workeru); token, který
+    // backend nezná (není v config.knownTokens), rovnou synchronizujeme na server.
+    if (Notification.permission === 'granted' && !localStorage.getItem(OPT_OUT_KEY)) {
         waitForMessaging(5000).then(function (messaging) {
             if (!messaging) {
                 updateButtons();
@@ -123,6 +147,13 @@ const run = (config) => {
                 .then(function (currentToken) {
                     if (currentToken) {
                         window.adtNotificationsToken = currentToken;
+
+                        var knownTokens = config.knownTokens || [];
+                        if (config.syncFirebaseTokenLink && knownTokens.indexOf(currentToken) === -1) {
+                            $.nette.ajax({
+                                url: config.syncFirebaseTokenLink.replace('__firebaseToken__', currentToken)
+                            });
+                        }
                     }
                     updateButtons();
                 })
