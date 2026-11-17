@@ -1,5 +1,7 @@
-const loadedComponents = [];
-let componentsConfig = {};
+import observe from './observe';
+
+const loadedComponents = new Set();
+let componentsConfig = null;
 
 // Component module resolution (Vite only).
 //
@@ -47,114 +49,49 @@ const importComponent = (path) => {
 	return loader();
 };
 
-const init = (selector, path) => {
-	let bodyDataset = document.querySelector(`body`).dataset.adtJsComponents;
-
-	if (
-		Object.keys(componentsConfig).length === 0 && typeof bodyDataset !== 'undefined'
-	) {
-		componentsConfig = JSON.parse(bodyDataset);
+const getComponentsConfig = () => {
+	if (componentsConfig === null) {
+		const bodyDataset = document.body.dataset.adtJsComponents;
+		componentsConfig = typeof bodyDataset !== 'undefined' ? JSON.parse(bodyDataset) : {};
 	}
+	return componentsConfig;
+};
 
-	const runPath = (path, selector) => {
+// Runs the component once the first `[data-adt-<selector>]` element shows up in the document.
+const init = (selector, path) => {
+	observe(`[data-adt-${selector}]`, () => {
+		if (loadedComponents.has(path)) return;
+		loadedComponents.add(path);
+
+		const options = getComponentsConfig()[selector] || {};
+
+		if (typeof path === 'function') {
+			path(options);
+			return;
+		}
+
 		importComponent(path)
-			.then(component => {
-				component.default.run(componentsConfig[selector] || {});
-			})
+			.then(component => component.default.run(options))
 			.catch(err => {
 				// Don't let a single missing/optional component break page init.
 				console.warn(`adt-js-components: failed to load component "${path}":`, err);
 			});
-	};
-
-	const existingTarget = document.querySelector(`[data-adt-${selector}]`);
-	if (existingTarget && !loadedComponents.includes(path)) {
-		loadedComponents.push(path);
-		typeof path === 'function'
-			? path(componentsConfig[selector] || {})
-			: runPath(path, selector);
-	}
-
-	const observer = new MutationObserver((mutationsList) => {
-		// component is already loaded
-		if (loadedComponents.includes(path)) return;
-
-		for (const mutation of mutationsList) {
-			if (mutation.type === 'childList') {
-				const target = mutation.target.querySelector(`[data-adt-${selector}]`);
-
-				if (target) {
-					loadedComponents.push(path);
-
-					if (typeof path === 'function') {
-						path(componentsConfig[selector] || {});
-					} else {
-						runPath(path, selector);
-					}
-					break;
-				}
-			}
-		}
-	});
-
-	// Sleduj celý dokument pro změny ve stromu DOM
-	observer.observe(document.body, {
-		childList: true,
-		subtree: true,
-	});
+	}, { once: true });
 };
 
-const initCurrencyInput = () => {
-	init('currency-input', 'CurrencyInput');
-};
-
-const initDateInput = () => {
-	init('date-input', 'DateInput');
-};
-
-const initGLightbox = () => {
-	init('glightbox', 'GLightbox');
-};
-
-const initGoogleMaps = () => {
-	init('google-maps', 'GoogleMaps');
-};
-
-const initRecaptcha = () => {
-	init('recaptcha', 'Recaptcha');
-};
-
-const initRedrawSnippet = () => {
-	init('redraw-snippet', 'RedrawSnippet');
-};
-
-const initSelect2 = () => {
-	init('select2', 'Select2');
-};
-
-const initSubmitForm = () => {
-	init('submit-form', 'SubmitForm');
-};
-
-const initTinyMCE = () => {
-	init('tinymce', 'TinyMCE');
-};
-
-const initAjaxSelect = () => {
-	init('ajax-select', 'AjaxSelect');
-};
-
-const initInputClear = () => {
-	init('input-clear', 'InputClear');
-};
-
-const initMap = () => {
-	init('map', 'Map');
-};
-
-const initReplicator = () => {
-	init('replicator', 'Replicator');
-};
+const initCurrencyInput = () => init('currency-input', 'CurrencyInput');
+const initDateInput = () => init('date-input', 'DateInput');
+const initGLightbox = () => init('glightbox', 'GLightbox');
+const initGoogleMaps = () => init('google-maps', 'GoogleMaps');
+const initRecaptcha = () => init('recaptcha', 'Recaptcha');
+const initRedrawSnippet = () => init('redraw-snippet', 'RedrawSnippet');
+const initSelect2 = () => init('select2', 'Select2');
+const initSubmitForm = () => init('submit-form', 'SubmitForm');
+const initTinyMCE = () => init('tinymce', 'TinyMCE');
+const initAjaxSelect = () => init('ajax-select', 'AjaxSelect');
+const initInputClear = () => init('input-clear', 'InputClear');
+const initMap = () => init('map', 'Map');
+const initReplicator = () => init('replicator', 'Replicator');
 
 const getFirstDiffCharIndex = (a, b) => {
 	const longerLength = Math.max(a.length, b.length);

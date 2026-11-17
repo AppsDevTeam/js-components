@@ -1,10 +1,9 @@
 import AutoNumeric from "autonumeric";
+import observe from '../observe';
 
 function run(options) {
-	$.nette.ext('live').after(function ($element) {
-		$element.find('[data-adt-currency-input]').each(function () {
-			new AutoNumeric(this, JSON.parse(this.dataset.adtCurrencyInput));
-		});
+	observe('[data-adt-currency-input]', function (el) {
+		new AutoNumeric(el, JSON.parse(el.dataset.adtCurrencyInput));
 	});
 }
 

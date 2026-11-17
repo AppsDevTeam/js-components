@@ -5,6 +5,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { decode as decodeFlexPolyline } from '@here/flexpolyline';
 import {defaultRouteSettings} from './route.types.js';
+import observe from '../observe';
 
 let siteKey;
 let markerImg;
@@ -35,6 +36,19 @@ const MAP_PROVIDER = {
 	MAPY_CZ: 'mapy.cz',
 	HERE: 'here',
 };
+
+function destroyMap(el) {
+	const map = mapInstances.get(el);
+	if (!map) {
+		return;
+	}
+
+	map.remove();
+	mapInstances.delete(el);
+	if (el.id && mapInstancesById.get(el.id) === map) {
+		mapInstancesById.delete(el.id);
+	}
+}
 
 async function run(options) {
 	siteKey = options.siteKey;
@@ -68,6 +82,8 @@ async function run(options) {
 			customMarkers,
 			mapProvider,
 		};
+
+		destroyMap(el);
 
 		const elId = el.id;
 		if (elId && mapInstancesById.has(elId)) {
@@ -217,44 +233,8 @@ async function run(options) {
 		}
 	}
 
-	const observer = new MutationObserver(mutations => {
-		mutations.forEach(mutation => {
-			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1) {
-						if (node.hasAttribute("data-adt-map")) {
-							const oldMapElement = document.querySelector('[data-adt-map]');
-							if (oldMapElement && oldMapElement !== node && mapInstances.has(oldMapElement)) {
-								mapInstances.get(oldMapElement).remove();
-								mapInstances.delete(oldMapElement);
-							}
-							applyEventHandlers(node);
-						}
-						node.querySelectorAll?.('[data-adt-map]').forEach(el => {
-							const oldMapElement = document.querySelector('[data-adt-map]');
-							if (oldMapElement && oldMapElement !== el && mapInstances.has(oldMapElement)) {
-								mapInstances.get(oldMapElement).remove();
-								mapInstances.delete(oldMapElement);
-							}
-							applyEventHandlers(el);
-						});
-					}
-				});
-			}
-			if (mutation.type === "attributes" && mutation.attributeName === "data-adt-map") {
-				applyEventHandlers(mutation.target);
-			}
-		});
-	});
-
-	observer.observe(document.body, {
-		childList: true,
-		subtree: true,
-		attributes: true,
-		attributeFilter: ["data-adt-map"]
-	});
-
-	document.querySelectorAll('[data-adt-map]').forEach(el => applyEventHandlers(el));
+	// a changed data-adt-map builds the map again with the new options
+	observe('[data-adt-map]', applyEventHandlers, { attribute: 'data-adt-map', onRemove: destroyMap });
 }
 
 function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {

@@ -3,6 +3,7 @@ import 'select2/dist/css/select2.min.css';
 import 'select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css'
 import '../Select2/input-group.css';
 import 'select2/dist/js/i18n/cs'
+import observe from '../observe';
 
 function run(options) {
 	/**
@@ -187,34 +188,7 @@ function run(options) {
 		});
 	}
 
-	const observer = new MutationObserver(mutations => {
-		const elements = [];
-
-		mutations.forEach(mutation => {
-			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1) {
-						if (node.hasAttribute("data-adt-ajax-select")) {
-							elements.push(node);
-						}
-
-						elements.push(...node.querySelectorAll('[data-adt-ajax-select]'));
-					}
-				});
-			}
-		});
-
-		if (elements.length) {
-			applyEventHandlers(elements);
-		}
-	});
-
-	observer.observe(document.body, {
-		childList: true,
-		subtree: true,
-	});
-
-	applyEventHandlers([...document.querySelectorAll('[data-adt-ajax-select]')]);
+	observe('[data-adt-ajax-select]', applyEventHandlers, { batch: true });
 }
 
 export default { run }

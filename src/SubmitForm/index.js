@@ -1,4 +1,6 @@
+import naja from 'naja';
 import Scrollparent from "scrollparent";
+import observe from '../observe';
 
 function isList(el) {
 	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio';
@@ -33,7 +35,10 @@ function markErrorsFor(errorElement) {
 }
 
 function scrollToFirstError(form) {
-	const el = $(form).find('.alert-danger:first, .is-invalid:first')[0];
+	const el = form.querySelector('.alert-danger, .is-invalid');
+	if (!el) {
+		return;
+	}
 
 	// we have to find first scrollable element (it can be document or modal for example)
 	let scrollParent = Scrollparent(el);
@@ -45,56 +50,83 @@ function scrollToFirstError(form) {
 	scrollParent.scrollBy({top: el.getBoundingClientRect().top - 100, behavior: 'smooth'});
 }
 
-function run(options) {
-	function applyEventHandlers(el) {
-		$(el).find('input, textarea, select').on('input', function(e) {
-			this.classList.remove('is-invalid');
-			if (isList(this)) {
-				$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
-			}
-			if (this.parentNode.classList.contains('input-group')) {
-				this.parentNode.classList.remove('is-invalid');
-			}
-		});
+const SPINNER = '<span class="spinner-border spinner-border-sm"></span>';
+
+// forms with a running request; a form stays locked until its last request completes
+const locks = new Map();
+
+function lock(form, button) {
+	const state = locks.get(form);
+	if (state) {
+		state.count++;
+		return;
 	}
 
-	$.nette.ext('live').after(function($el) {
-		$el.find('[data-adt-errors-for]').addBack('[data-adt-errors-for]').each(function() {
-			markErrorsFor(this);
-		});
+	const newState = {
+		count: 1,
+		enabledButtons: [...form.querySelectorAll('button:enabled')],
+		button: button instanceof HTMLButtonElement ? button : null,
+	};
+	locks.set(form, newState);
 
-		window.addEventListener('pageshow', (e) => {
-			if (e.persisted) {
-				$el.find('[data-adt-submit-form]').each(function(e) {
-					$(this).find('button').each(function () {
-						if ($(this).data('originalContent')) {
-							$(this).html($(this).data('originalContent'));
-						}
-					});
-					if ($(this).data('enabledButtons')) {
-						$(this).data('enabledButtons').each(function () {
-							$(this).prop('disabled', false);
-						});
-					}
-				});
-			}
-		});
+	form.querySelectorAll('button').forEach(el => el.disabled = true);
+	if (newState.button) {
+		newState.originalContent = button.innerHTML;
+		newState.originalWidth = button.style.width;
+		button.style.width = button.offsetWidth + 'px';
+		button.innerHTML = SPINNER;
+	}
+	form.querySelectorAll('.alert-danger').forEach(el => el.remove());
+	form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+}
 
-		$el.find('[data-adt-submit-form]').each(function(e) {
-			const observer = new MutationObserver(function(mutationsList, observer) {
-				mutationsList.forEach(function(mutation) {
-					if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-						$(mutation.addedNodes).each(function() {
-							applyEventHandlers(this);
-						});
-					}
-				});
-			});
+function unlock(form, force = false) {
+	const state = locks.get(form);
+	if (!state || (--state.count > 0 && !force)) {
+		return;
+	}
 
-			observer.observe(this, { childList: true, subtree: true });
+	locks.delete(form);
 
-			applyEventHandlers(this);
-		});
+	// the form or the entire page may be redrawn, then these elements are not in the document anymore
+	if (state.button) {
+		state.button.innerHTML = state.originalContent;
+		state.button.style.width = state.originalWidth;
+	}
+	state.enabledButtons.forEach(el => el.disabled = false);
+}
+
+// the form may be replaced by the redrawn snippet
+function currentForm(form) {
+	return form.isConnected || !form.id ? form : document.getElementById(form.id) || form;
+}
+
+function run(options) {
+	observe('[data-adt-errors-for]', markErrorsFor);
+
+	// error container which is a snippet itself keeps its element, only its content is replaced
+	naja.snippetHandler.addEventListener('afterUpdate', (event) => {
+		const {snippet} = event.detail;
+		if (snippet.matches('[data-adt-errors-for]')) {
+			markErrorsFor(snippet);
+		}
+	});
+
+	$(document).on('input', '[data-adt-submit-form] input, [data-adt-submit-form] textarea, [data-adt-submit-form] select', function() {
+		this.classList.remove('is-invalid');
+		if (isList(this)) {
+			$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
+		}
+		if (this.parentNode.classList.contains('input-group')) {
+			this.parentNode.classList.remove('is-invalid');
+		}
+	});
+
+	// the page restored from the back-forward cache still shows the state from before the redirect
+	window.addEventListener('pageshow', (e) => {
+		if (e.persisted) {
+			[...locks.keys()].forEach(form => unlock(form, true));
+		}
 	});
 
 	if (typeof Nette !== "undefined") {
@@ -131,73 +163,84 @@ function run(options) {
 		console.error('Package nette-forms is missing!');
 	}
 
-	$.nette.ext("submitForm", {
-		before: function (xhr, settings) {
-			if (settings.nette && settings.nette.el) {
-				const pendingXhr = settings.nette.el.data('pendingXhr');
-				if (pendingXhr) {
-					pendingXhr.abort();
-				}
-				settings.nette.el.data('pendingXhr', xhr);
-			}
-
-			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				let beforeCallback = settings.nette.el.attr('data-adt-submit-form-before-callback');
-				if (beforeCallback) {
-					if (!window[beforeCallback]()) {
-						return false;
-					}
-				}
-
-				settings.nette.form.data('enabledButtons', settings.nette.form.find('button:enabled'));
-				settings.nette.form.find('button').prop('disabled', true);
-				settings.nette.el.css('width', settings.nette.el.outerWidth());
-				settings.nette.el.data('originalContent', settings.nette.el.html());
-				settings.nette.el.html('<span class="spinner-border spinner-border-sm"></span>');
-				settings.nette.form.find('.alert-danger').remove();
-				settings.nette.form.find('.is-invalid').removeClass('is-invalid');
-			}
-		},
-		success: function (payload, status, xhr, settings) {
-			if (!payload.redirect && settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				let afterCallback = settings.nette.el.attr('data-adt-submit-form-after-callback');
-				if (afterCallback) {
-					window[afterCallback](payload, status, xhr, settings);
-				}
-
-				// the form or the entire page may be redrawn
-				if (settings.nette.el.data('originalContent')) {
-					settings.nette.el.html(settings.nette.el.data('originalContent'));
-				}
-				if (settings.nette.form.data('enabledButtons')) {
-					settings.nette.form.data('enabledButtons').each(function () {
-						$(this).prop('disabled', false);
-					});
-				}
-			}
-		},
-		error: function (xhr, status, error, settings) {
-			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined) {
-				if (status !== 'abort') {
-					settings.nette.form.prepend('<div class="alert alert-danger">' + xhr.responseText + '</div>');
-				}
-
-				settings.nette.el.html(settings.nette.el.data('originalContent'));
-				settings.nette.form.data('enabledButtons').each(function () {
-					$(this).prop('disabled', false);
-				});
-			}
-		},
-		complete:  function (xhr, status, settings) {
-			if (settings.nette && settings.nette.el) {
-				settings.nette.el.data('pendingXhr', null);
-			}
-
-			// if there are errors we will scroll to first of them
-			if (settings.nette && settings.nette.form && settings.nette.form.attr('data-adt-submit-form') !== undefined && settings.nette.form.find('.alert-danger, .is-invalid').length > 0) {
-				scrollToFirstError(settings.nette.form);
-			}
+	naja.uiHandler.addEventListener('interaction', (event) => {
+		// e.g. the form is invalid
+		if (event.defaultPrevented) {
+			return;
 		}
+
+		const {element, options} = event.detail;
+		const form = element instanceof HTMLFormElement ? element : element.form;
+		if (!form || !form.matches('[data-adt-submit-form]')) {
+			return;
+		}
+
+		// the element is the submitter, or the form when it was submitted without one
+		const button = element === form ? null : element;
+
+		const beforeCallback = element.getAttribute('data-adt-submit-form-before-callback');
+		if (beforeCallback && !window[beforeCallback]()) {
+			event.preventDefault();
+			return;
+		}
+
+		// shared with the request following a redirect, as Naja copies the options to it
+		options.adtSubmitForm = { form, button, element };
+	});
+
+	naja.addEventListener('start', (event) => {
+		const context = event.detail.options.adtSubmitForm;
+		// the request following a redirect keeps the form locked by the original request
+		if (context && !context.locked) {
+			context.locked = true;
+			lock(context.form, context.button);
+		}
+	});
+
+	naja.addEventListener('success', (event) => {
+		const {payload, options} = event.detail;
+		const context = options.adtSubmitForm;
+		if (!context || context.redirected || payload.redirect) {
+			return;
+		}
+
+		const afterCallback = context.element.getAttribute('data-adt-submit-form-after-callback');
+		if (afterCallback) {
+			window[afterCallback](payload, event.detail);
+		}
+	});
+
+	naja.addEventListener('error', async (event) => {
+		const {error, response, options} = event.detail;
+		const context = options.adtSubmitForm;
+		if (!context) {
+			return;
+		}
+
+		const message = response && !response.bodyUsed ? await response.text() : error.message;
+		const form = currentForm(context.form);
+		form.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">' + message + '</div>');
+		scrollToFirstError(form);
+	});
+
+	naja.addEventListener('complete', (event) => {
+		const {payload, options} = event.detail;
+		const context = options.adtSubmitForm;
+		if (!context || !context.locked) {
+			return;
+		}
+
+		// the page is leaving or the request following the redirect completes the submission
+		if (payload?.redirect) {
+			context.redirected = true;
+			return;
+		}
+
+		context.locked = false;
+		unlock(context.form);
+
+		// if there are errors we will scroll to first of them
+		scrollToFirstError(currentForm(context.form));
 	});
 }
 

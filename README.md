@@ -12,6 +12,50 @@ yarn add adt-js-components
 import AdtJsComponents from 'adt-js-components'
 ```
 
+Components sending AJAX requests (`SubmitForm`, `RedrawSnippet`, `Recaptcha`, `Notifications`) use [Naja](https://naja.js.org),
+the project has to install and initialize it:
+
+```
+yarn add naja
+```
+
+```
+import naja from 'naja';
+naja.initialize();
+```
+
+## Observing elements
+
+Components are initialized for elements already in the page and for elements added later (snippet redraw, replicator, modal...).
+The same helper can be used in the project:
+
+```
+import { observe } from 'adt-js-components';
+
+observe('[data-my-component]', (el) => { ... });                 // once for each element
+observe('[data-my-component]', (els) => { ... }, { batch: true }); // all elements added at once
+observe('[data-my-component]', (el) => { ... }, { once: true });   // first element only
+observe('[data-my-component]', (el) => { ... }, {
+	attribute: 'data-my-component', // called again when the attribute changes
+	onRemove: (el) => { ... },      // element left the document (a moved element is not removed)
+});
+```
+
+Attributes are observed only when some watcher asks for them.
+
+`observe()` returns a function which stops watching. `$.observe(selector, callback)` is kept as an alias.
+
+## Upgrading from 2.x
+
+- `nette.ajax.js` is replaced by Naja. `$.nette.ext(...)` extensions of the project have to be rewritten
+  to [Naja events](https://naja.js.org/#/events), and forms and links with `class="ajax"` keep working.
+- `$.fn.adtAjax()` is removed, use `naja.uiHandler.submitForm(submitter)` or `naja.uiHandler.clickElement(link)`.
+- The after callback of `SubmitForm` gets `(payload, detail)`, where `detail` is the detail of the Naja `success` event
+  (`request`, `response`, `payload`, `options`), instead of `(payload, status, xhr, settings)`.
+- `SubmitForm` no longer aborts the previous request of the same element, Naja aborts the previous request itself
+  (option `unique`). Redraws of `RedrawSnippet` abort only the previous redraw.
+- `RedrawSnippet` redraws on `change` of a select as well, so it works with Select2.
+
 ## Configuration
 
 JsComponentsConfig.php and in config.neon `services.jsComponents`
