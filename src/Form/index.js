@@ -234,9 +234,15 @@ function run(options) {
 			return;
 		}
 
-		const message = response && !response.bodyUsed ? await response.text() : error.message;
+		// the body of an error response comes from the server or a proxy - never parsed as HTML (an
+		// error page would also only show as its source), plain text only
+		const isText = response && !response.bodyUsed && (response.headers.get('Content-Type') || '').startsWith('text/plain');
+		const message = isText ? (await response.text()).slice(0, 1000) : error.message;
 		const form = currentForm(context.form);
-		form.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">' + message + '</div>');
+		const alert = document.createElement('div');
+		alert.className = 'alert alert-danger';
+		alert.textContent = message;
+		form.prepend(alert);
 		scrollToFirstError(form);
 	});
 
