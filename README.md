@@ -8,9 +8,22 @@ yarn add adt-js-components
 
 ## Usage
 
+Register the modules once (Vite `import.meta.glob()`, paths relative to the file). Nothing else is called:
+every registered component loads lazily (its own chunk) once its element shows up in the document.
+
 ```
-import AdtJsComponents from 'adt-js-components'
+import AdtJsComponents from 'adt-js-components';
+
+AdtJsComponents.registerModules({
+	// components of the project: <Name>/index.js, started by data-adt-<name in kebab-case>
+	app: import.meta.glob('../../../**/index.js'),
+	// built-in components the project uses (and has installed their packages)
+	builtin: import.meta.glob('../../../../../node_modules/adt-js-components/src/{Form,RedrawSnippet,InputClear,Replicator}/index.js'),
+});
 ```
+
+Built-ins start on `data-adt-<name>` (e.g. `data-adt-redraw-snippet`), `Form` on any `<form>`. The `init*()`
+functions (`initForm()`, `initSelect2()`...) still work, but registration alone is enough since 3.2.
 
 Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`, `Notifications`) use [Naja](https://naja.js.org),
 the project has to install and initialize it:
@@ -64,10 +77,8 @@ JsComponentsConfig.php and in config.neon `services.jsComponents`
 
 For example, there's an ExampleForm located in /app/Components/Forms/ExampleForm
 
-1. Create your own data selector, for example `example-form`.
-2. Attribute `data-adt-example-form` must be included in your HTML.
-3. `path` starts at /app but excludes it, so it will be `Components/Forms/ExampleForm`
-4. In `/app/Components/Forms/ExampleForm` create `index.js` with
+1. Attribute `data-adt-example-form` (directory name in kebab-case) must be included in your HTML.
+2. In `/app/Components/Forms/ExampleForm` create `index.js` with
 
 ```
 const run = (options) => {
@@ -77,22 +88,8 @@ const run = (options) => {
 export default { run };
 ```
 
-5. In your project JS (`app.js`) add
-
-```
-AdtJsComponents.init('example-form', 'Components/Forms/ExampleForm');
-```
-
-6. Example of `resolve` in your project `webpack.config.js`, if all applications js modules are relatively to `app`.
-
-```
-resolve: {
-	modules: ['node_modules'],
-	alias: {
-		JsComponents: path.resolve(__dirname, 'app')
-	}
-}
-```
+3. It loads by itself when the `app` glob of `registerModules()` covers it. A different selector:
+   `AdtJsComponents.init('my-selector', 'Components/Forms/ExampleForm')`.
 
 
 ## Predefined components

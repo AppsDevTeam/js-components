@@ -16,9 +16,50 @@ let componentsConfig = null;
 //   });
 const registeredModules = { fancyadmin: {}, app: {}, builtin: {} };
 
+// Built-in components: key of the options in data-adt-js-components and the element that starts them.
+const BUILTINS = {
+	AjaxSelect: ['ajax-select'],
+	CurrencyInput: ['currency-input'],
+	DateInput: ['date-input'],
+	// any <form>: nette-forms validation, spinner/locking/errors of forms with data-adt-submit-form
+	Form: ['submit-form', 'form'],
+	GLightbox: ['glightbox'],
+	GoogleMaps: ['google-maps'],
+	InputClear: ['input-clear'],
+	Map: ['map'],
+	Messaging: ['messaging'],
+	Notifications: ['notifications', '[data-adt-notifications-enable], [data-adt-notifications-disable]'],
+	Recaptcha: ['recaptcha'],
+	RedrawSnippet: ['redraw-snippet'],
+	Replicator: ['replicator'],
+	Select2: ['select2'],
+	TinyMCE: ['tinymce'],
+	Translate: ['translate'],
+};
+
+// ExampleForm -> example-form
+const kebab = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+
+// Directory of the component from a glob key (".../Components/Forms/ExampleForm/index.js" -> "ExampleForm")
+const componentName = (key) => key.split('/').slice(-2, -1)[0];
+
+// Registers the import.meta.glob() maps and starts watching for every registered component, so the
+// project calls no init*(): a component loads (its own chunk) once its element shows up in the
+// document. Built-ins by BUILTINS, project components (scope app) by `data-adt-<kebab of the
+// directory name>`; init() with an own selector is still possible.
 const registerModules = (maps) => {
 	for (const scope of Object.keys(maps)) {
 		registeredModules[scope] = Object.assign(registeredModules[scope] || {}, maps[scope]);
+		for (const key of Object.keys(maps[scope])) {
+			const name = componentName(key);
+			if (scope === 'builtin') {
+				const [selector, cssSelector] = BUILTINS[name] || [kebab(name)];
+				init(selector, name, cssSelector);
+			} else if (scope === 'app') {
+				// the glob key without /index.js is a path importComponent() finds in the app map
+				init(kebab(name), key.slice(0, -'/index.js'.length));
+			}
+		}
 	}
 };
 
