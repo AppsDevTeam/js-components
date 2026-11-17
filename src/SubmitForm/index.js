@@ -133,7 +133,7 @@ function run(options) {
 		Nette.showFormErrors = function(form, errors) {
 			// remove previously displayed error messages
 			form.querySelectorAll('[id$="-errors"]').forEach(el => {
-				el.innerHTML = '';
+				el.replaceChildren();
 			});
 
 			const alertErrors = [];
@@ -144,8 +144,12 @@ function run(options) {
 				if (!errorElement) {
 					alertErrors.push(error.message);
 					console.warn(`Element with ID "${errorElementId}" no exist.`);
-				} else if (!errorElement.innerHTML.includes(error.message)) {
-					errorElement.innerHTML += `<div>${error.message}</div>`;
+				} else if (![...errorElement.children].some(el => el.textContent === error.message)) {
+					// textContent, ne innerHTML: zprava muze obsahovat hodnotu z formulare nebo serveru,
+					// jako HTML by spustila vlozeny kod (DOM XSS)
+					const message = document.createElement('div');
+					message.textContent = error.message;
+					errorElement.append(message);
 				}
 
 				toggleInvalid(error.element, true);
