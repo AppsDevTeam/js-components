@@ -8,33 +8,31 @@ let componentsConfig = null;
 // Rollup/Vite cannot statically analyse concatenated dynamic imports, so callers
 // register `import.meta.glob()` maps that this loader resolves from. Maps are
 // MERGED per scope, so multiple callers can contribute — e.g. FancyAdmin registers
-// its own components ('fancyadmin'), while the consuming app registers its own
-// ('app') and the built-ins it uses ('builtin'):
+// its own components ('fancyadmin'), while the consuming app registers its own ('app'):
 //   AdtJsComponents.registerModules({
-//     app:     import.meta.glob('.../app/UI/**/index.js'),
-//     builtin: import.meta.glob('.../node_modules/adt-js-components/src/{Select2,...}/index.js'),
+//     app: import.meta.glob('.../app/UI/**/index.js'),
 //   });
-const registeredModules = { fancyadmin: {}, app: {}, builtin: {} };
+// Built-in components need no registration, see BUILTINS.
+const registeredModules = { fancyadmin: {}, app: {} };
 
-// Built-in components: key of the options in data-adt-js-components and the element that starts them.
+// Built-in components: [key of the options in data-adt-js-components, element that starts them (default
+// [data-adt-<key>]), loader]. Each one is its own chunk loaded once its element shows up in the document.
 const BUILTINS = {
-	AjaxSelect: ['ajax-select'],
-	CurrencyInput: ['currency-input'],
-	DateInput: ['date-input'],
+	AjaxSelect: ['ajax-select', null, () => import('./AjaxSelect/index.js')],
+	CurrencyInput: ['currency-input', null, () => import('./CurrencyInput/index.js')],
+	DateInput: ['date-input', null, () => import('./DateInput/index.js')],
 	// any <form>: nette-forms validation, spinner/locking/errors of forms with data-adt-submit-form
-	Form: ['submit-form', 'form'],
-	GLightbox: ['glightbox'],
-	GoogleMaps: ['google-maps'],
-	InputClear: ['input-clear'],
-	Map: ['map'],
-	Messaging: ['messaging'],
-	Notifications: ['notifications', '[data-adt-notifications-enable], [data-adt-notifications-disable]'],
-	Recaptcha: ['recaptcha'],
-	RedrawSnippet: ['redraw-snippet'],
-	Replicator: ['replicator'],
-	Select2: ['select2'],
-	TinyMCE: ['tinymce'],
-	Translate: ['translate'],
+	Form: ['submit-form', 'form', () => import('./Form/index.js')],
+	GLightbox: ['glightbox', null, () => import('./GLightbox/index.js')],
+	GoogleMaps: ['google-maps', null, () => import('./GoogleMaps/index.js')],
+	InputClear: ['input-clear', null, () => import('./InputClear/index.js')],
+	Map: ['map', null, () => import('./Map/index.js')],
+	Recaptcha: ['recaptcha', null, () => import('./Recaptcha/index.js')],
+	RedrawSnippet: ['redraw-snippet', null, () => import('./RedrawSnippet/index.js')],
+	Replicator: ['replicator', null, () => import('./Replicator/index.js')],
+	// data-adt-select2 = the attribute of the PHP side from the times of Select2
+	Select: ['select', 'select[data-adt-select], select[data-adt-select2]', () => import('./Select/index.js')],
+	Translate: ['translate', null, () => import('./Translate/index.js')],
 };
 
 // ExampleForm -> example-form
@@ -45,21 +43,28 @@ const componentName = (key) => key.split('/').slice(-2, -1)[0];
 
 // Registers the import.meta.glob() maps and starts watching for every registered component, so the
 // project calls no init*(): a component loads (its own chunk) once its element shows up in the
-// document. Built-ins by BUILTINS, project components (scope app) by `data-adt-<kebab of the
-// directory name>`; init() with an own selector is still possible.
+// document - project components (scope app) by `data-adt-<kebab of the directory name>`. init() with
+// an own selector is still possible.
 const registerModules = (maps) => {
+	startBuiltins();
 	for (const scope of Object.keys(maps)) {
 		registeredModules[scope] = Object.assign(registeredModules[scope] || {}, maps[scope]);
-		for (const key of Object.keys(maps[scope])) {
-			const name = componentName(key);
-			if (scope === 'builtin') {
-				const [selector, cssSelector] = BUILTINS[name] || [kebab(name)];
-				init(selector, name, cssSelector);
-			} else if (scope === 'app') {
+		if (scope === 'app') {
+			for (const key of Object.keys(maps[scope])) {
 				// the glob key without /index.js is a path importComponent() finds in the app map
-				init(kebab(name), key.slice(0, -'/index.js'.length));
+				init(kebab(componentName(key)), key.slice(0, -'/index.js'.length));
 			}
 		}
+	}
+};
+
+let builtinsStarted = false;
+const startBuiltins = () => {
+	if (builtinsStarted) return;
+	builtinsStarted = true;
+	for (const [name, [selector, cssSelector]] of Object.entries(BUILTINS)) {
+		// options.selector of a component (Select) changes the elements it handles, so also the one starting it
+		init(selector, name, getComponentsConfig()[selector]?.selector || cssSelector || undefined);
 	}
 };
 
@@ -81,7 +86,7 @@ const importComponent = (path) => {
 	} else if (path.includes('/')) {
 		loader = resolveFromMap(registeredModules.app, path);
 	} else {
-		loader = resolveFromMap(registeredModules.builtin, path);
+		loader = BUILTINS[path]?.[2];
 	}
 
 	if (!loader) {
@@ -120,25 +125,6 @@ const init = (selector, path, cssSelector = `[data-adt-${selector}]`) => {
 	}, { once: true });
 };
 
-const initCurrencyInput = () => init('currency-input', 'CurrencyInput');
-const initDateInput = () => init('date-input', 'DateInput');
-const initGLightbox = () => init('glightbox', 'GLightbox');
-const initGoogleMaps = () => init('google-maps', 'GoogleMaps');
-const initRecaptcha = () => init('recaptcha', 'Recaptcha');
-const initRedrawSnippet = () => init('redraw-snippet', 'RedrawSnippet');
-const initSelect2 = () => init('select2', 'Select2');
-// Any <form>: nette-forms validation, plus spinner, locking and errors of forms with data-adt-submit-form
-const initForm = () => init('submit-form', 'Form', 'form');
-const initSubmitForm = () => {
-	console.warn('adt-js-components: initSubmitForm() is deprecated, use initForm() (component Form)');
-	initForm();
-};
-const initTinyMCE = () => init('tinymce', 'TinyMCE');
-const initAjaxSelect = () => init('ajax-select', 'AjaxSelect');
-const initInputClear = () => init('input-clear', 'InputClear');
-const initMap = () => init('map', 'Map');
-const initReplicator = () => init('replicator', 'Replicator');
-
 const getFirstDiffCharIndex = (a, b) => {
 	const longerLength = Math.max(a.length, b.length);
 	for (let i = 0; i < longerLength; i++) {
@@ -160,19 +146,5 @@ export const loadScssModule = (styles) => {
 export default {
 	init,
 	registerModules,
-	initCurrencyInput,
-	initDateInput,
-	initGLightbox,
-	initGoogleMaps,
-	initRecaptcha,
-	initRedrawSnippet,
-	initSelect2,
-	initForm,
-	initSubmitForm,
-	initTinyMCE,
-	initAjaxSelect,
-	initInputClear,
-	initMap,
-	initReplicator,
 	loadScssModule,
 };

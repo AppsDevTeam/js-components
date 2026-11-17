@@ -29,22 +29,25 @@ function redrawLater(el) {
 }
 
 async function run(options) {
-	// jQuery handlers to catch events triggered by jQuery plugins as well
-	$(document)
-		.on('click', SELECTOR, function (e) {
-			if (this.matches(BUTTON_SELECTOR)) {
-				redraw(this, e.originalEvent);
-			}
-		})
-		.on('input', SELECTOR, function () {
-			if (!this.matches(BUTTON_SELECTOR)) {
-				redrawLater(this);
-			}
-		})
-		// Select2 hides the native select and triggers only change
-		.on('change', `select${SELECTOR}`, function () {
-			redrawLater(this);
-		});
+	document.addEventListener('click', (e) => {
+		const el = e.target.closest(SELECTOR);
+		if (el && el.matches(BUTTON_SELECTOR)) {
+			redraw(el, e);
+		}
+	});
+	document.addEventListener('input', (e) => {
+		const el = e.target.closest(SELECTOR);
+		if (el && !el.matches(BUTTON_SELECTOR)) {
+			redrawLater(el);
+		}
+	});
+	// Tom Select (component Select) keeps the native select hidden and dispatches only change on it
+	document.addEventListener('change', (e) => {
+		const el = e.target.closest(`select${SELECTOR}`);
+		if (el) {
+			redrawLater(el);
+		}
+	});
 }
 
 export default { run }

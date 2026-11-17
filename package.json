@@ -1,6 +1,6 @@
 {
   "name": "adt-js-components",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "JavaScript components for Nette framework",
   "main": "index.js",
   "scripts": {
@@ -10,74 +10,19 @@
     "type": "git",
     "url": "git+https://github.com/AppsDevTeam/js-components.git"
   },
-  "peerDependencies": {
-    "jquery": "^3.4.1",
-    "naja": "^3.0.0",
-    "select2": "^4.0.13",
-    "select2-bootstrap-5-theme": "^1.1.1",
-    "autonumeric": "^4.6.0",
+  "dependencies": {
+    "@googlemaps/js-api-loader": "^1.16.10",
     "@here/flexpolyline": "^0.1.0",
-    "flatpickr": "^4.6.3",
-    "script-loader": "^0.7.2",
-    "timepicker": "^1.13.4",
-    "glightbox": "^3.0.7",
-    "@googlemaps/js-api-loader": "^1.11.1",
-    "tinymce": "^5.7.0",
-    "tinymce-i18n": "^20.12.25",
+    "autonumeric": "^4.10.10",
+    "flatpickr": "^4.6.13",
+    "glightbox": "^3.3.1",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "firebase": "^12.10.0",
-    "nette-forms": "^3.5.0"
+    "nette-forms": "^3.5.4",
+    "tom-select": "^2.7.0"
   },
-  "peerDependenciesMeta": {
-    "naja": {
-      "optional": true
-    },
-    "select2": {
-      "optional": true
-    },
-    "select2-bootstrap-5-theme": {
-      "optional": true
-    },
-    "autonumeric": {
-      "optional": true
-    },
-    "@here/flexpolyline": {
-      "optional": true
-    },
-    "flatpickr": {
-      "optional": true
-    },
-    "script-loader": {
-      "optional": true
-    },
-    "timepicker": {
-      "optional": true
-    },
-    "glightbox": {
-      "optional": true
-    },
-    "@googlemaps/js-api-loader": {
-      "optional": true
-    },
-    "tinymce": {
-      "optional": true
-    },
-    "tinymce-i18n": {
-      "optional": true
-    },
-    "leaflet": {
-      "optional": true
-    },
-    "leaflet.markercluster": {
-      "optional": true
-    },
-    "firebase": {
-      "optional": true
-    },
-    "nette-forms": {
-      "optional": true
-    }
+  "peerDependencies": {
+    "naja": "^3.3.3"
   },
   "author": "Apps Dev Team",
   "license": "MIT",

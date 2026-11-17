@@ -8,8 +8,11 @@ yarn add adt-js-components
 
 ## Usage
 
-Register the modules once (Vite `import.meta.glob()`, paths relative to the file). Nothing else is called:
-every registered component loads lazily (its own chunk) once its element shows up in the document.
+Nothing to install besides the package: the libraries of the built-in components (Tom Select, flatpickr,
+AutoNumeric, nette-forms, Leaflet...) are its dependencies, and no jQuery is needed. Each built-in component
+starts by itself (its own chunk) once its element shows up in the document, a page without it loads nothing of it.
+
+Components of the project are registered once (Vite `import.meta.glob()`, path relative to the file):
 
 ```
 import AdtJsComponents from 'adt-js-components';
@@ -17,16 +20,16 @@ import AdtJsComponents from 'adt-js-components';
 AdtJsComponents.registerModules({
 	// components of the project: <Name>/index.js, started by data-adt-<name in kebab-case>
 	app: import.meta.glob('../../../**/index.js'),
-	// built-in components the project uses (and has installed their packages)
-	builtin: import.meta.glob('../../../../../node_modules/adt-js-components/src/{Form,RedrawSnippet,InputClear,Replicator}/index.js'),
 });
 ```
 
-Built-ins start on `data-adt-<name>` (e.g. `data-adt-redraw-snippet`), `Form` on any `<form>`. The `init*()`
-functions (`initForm()`, `initSelect2()`...) still work, but registration alone is enough since 3.2.
+Built-ins start on `data-adt-<name>` (e.g. `data-adt-redraw-snippet`), `Form` on any `<form>`, `Select` on
+`select[data-adt-select]` (or `data-adt-select2`). Options of a component go to `data-adt-js-components` of `<body>`
+(JSON keyed by the name, e.g. `{"select": {"selector": "select:not(.select-default)"}}`), options of an element to its
+attribute (JSON, e.g. `data-adt-date-input='{"format": "H:i"}'`).
 
-Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`, `Notifications`) use [Naja](https://naja.js.org),
-the project has to install and initialize it:
+Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`) use [Naja](https://naja.js.org) (peer
+dependency - one instance for the project and the components), the project installs and initializes it:
 
 ```
 yarn add naja
@@ -56,7 +59,7 @@ observe('[data-my-component]', (el) => { ... }, {
 
 Attributes are observed only when some watcher asks for them.
 
-`observe()` returns a function which stops watching. `$.observe(selector, callback)` is kept as an alias.
+`observe()` returns a function which stops watching.
 
 ## Upgrading from 2.x
 
@@ -67,7 +70,26 @@ Attributes are observed only when some watcher asks for them.
   (`request`, `response`, `payload`, `options`), instead of `(payload, status, xhr, settings)`.
 - `Form` (formerly `SubmitForm`) no longer aborts the previous request of the same element, Naja aborts the previous request itself
   (option `unique`). Redraws of `RedrawSnippet` abort only the previous redraw.
-- `RedrawSnippet` redraws on `change` of a select as well, so it works with Select2.
+- `RedrawSnippet` redraws on `change` of a select as well (Tom Select dispatches only `change` on the hidden select).
+- **No jQuery.** The package neither needs nor provides it (`$.observe()` is gone, use `observe`). A project that
+  still uses jQuery itself keeps installing it.
+- **Select2 is replaced by [Tom Select](https://tom-select.js.org)** (Bootstrap 5 theme). Component `Select2` is now
+  `Select` and starts only on `select[data-adt-select]` / `select[data-adt-select2]`, not on every select - the old
+  behaviour is `{"select": {"selector": "select:not(.select-default)"}}` in `data-adt-js-components`. The attribute
+  takes Tom Select settings; the Select2 options `placeholder`, `dropdownParent`, `dropdownCssClass`, `tags`,
+  `allowClear`, `minimumResultsForSearch` (also `data-minimum-results-for-search`) are converted. Code calling
+  `$(el).select2(...)` or listening to `select2:*` events has to use the Tom Select API (`el.tomselect`) and its events;
+  the native `change` of the select is dispatched as before.
+- `AjaxSelect` uses Tom Select too, the attributes (`data-adt-ajax-select`, `data-ajax-select-options`,
+  `data-allow-new-value`) and the request (`entityName`, `entityOptions[...]`) stay.
+- `DateInput` with `type="time"` uses flatpickr (time only) instead of the jQuery plugin timepicker; `format`,
+  `minTime`, `maxTime` stay.
+- `Replicator` no longer needs the jQuery plugin forms-replicator. Code calling `$(el).formReplicator(...)` with own
+  callbacks has to keep that plugin (and jQuery) or listen to the changes of the DOM (`observe`).
+- Components `TinyMCE`, `Messaging` and `Notifications` are removed (push notifications: Web Push of FancyAdmin).
+- Built-ins need no registration: the `builtin` scope of `registerModules()` and the `init*()` functions
+  (`initForm()`, `initSelect2()`...) are removed. `init(selector, path, cssSelector)` stays for own selectors.
+- Options in data attributes must be valid JSON (jQuery `.data()` silently passed anything else as a string).
 
 ## Configuration
 
@@ -96,53 +118,29 @@ export default { run };
 
 ### Currency Input
 
-Attribute `data-adt-currency-input` must be included in your HTML!
-
-```
-AdtJsComponents.initCurrencyInput();
-```
+`data-adt-currency-input` (AutoNumeric).
 
 ### Date Input
 
-Attribute `data-adt-date-input` must be included in your HTML!
-
-```
-AdtJsComponents.initDateInput();
-```
+`data-adt-date-input` with JSON options (`format`, `value`, `minDate`, `maxDate`, `minTime`, `maxTime`, `altInput`...) -
+flatpickr, `type="time"` only the time, the language from `<html lang>`.
 
 ### Recaptcha
 
-Attribute `data-adt-recaptcha` must be included in your HTML!
+`data-adt-recaptcha` on the form.
 
-```
-AdtJsComponents.initRecaptcha();
-```
+### Select
 
-### Select 2
-
-Attribute `data-adt-select2` must be included in your HTML!
-
-```
-AdtJsComponents.initSelect2();
-```
+`select[data-adt-select]` (or `data-adt-select2`) with optional JSON settings of [Tom Select](https://tom-select.js.org/docs/).
+A select with the Nette prompt (`<option value="">`) that is not required gets a clear button, a multiple select
+remove buttons. `.select-default` around a select keeps the native one.
 
 ### Form
 
-```
-yarn add nette-forms
-```
-
-```
-AdtJsComponents.initForm();
-```
-
-Loads once the page has any `<form>` (register `Form` among the builtin modules). It loads
-[nette-forms](https://github.com/nette/forms) itself - client-side validation of all forms, `window.Nette` for Naja -
-so the project does not import it. Forms with the attribute `data-adt-submit-form` additionally get the spinner
-on the submit button, locking while submitting and errors rendered next to the inputs (`data-adt-errors-for`).
-
-`initSubmitForm()` (component `SubmitForm` up to 3.0) is a deprecated alias of `initForm()`; a project registering
-`SubmitForm` in `registerModules()` has to register `Form` instead.
+Loads once the page has any `<form>`. It loads [nette-forms](https://github.com/nette/forms) itself - client-side
+validation of all forms, `window.Nette` for Naja - so the project does not import it. Forms with the attribute
+`data-adt-submit-form` additionally get the spinner on the submit button, locking while submitting and errors
+rendered next to the inputs (`data-adt-errors-for`).
 
 On each submit before and after callback can be added.
 Before callback is invoked before submit and form is not submitted if the function return false.
@@ -163,27 +161,23 @@ After callback is invoked after successed submit.
 
 ### Ajax Select
 
-Attribute `data-adt-ajax-select` must be included in your HTML!
+`data-adt-ajax-select` (adt/ajax-select) - Tom Select loading the items from the server. Selects out of the viewport
+are built only when they get close to it or get focus.
 
-```
-AdtJsComponents.initAjaxSelect();
-```
+### Replicator
+
+`data-adt-replicator="<html of a new row>"` (kdyby/replicator) with rows `[data-adt-replicator-item]`, buttons
+`[data-adt-replicator-add]` and `[data-adt-replicator-remove]`. A new row gets `_new_<n>` instead of `_new_` in ids,
+names, labels and Nette rules (toggles included). `data-adt-replicator-add-before-callback="fn"` on the add button
+can cancel adding (`window.fn(button)` returns false), `data-adt-replicator-depth` = depth of a nested replicator.
 
 ### Input Clear
 
-Attribute `data-adt-input-clear` must be included in your HTML!
-
-The option `selector` have to be set to select inputs to clear.
-
-The option `confirmMessage` can be set to clear confirmation.
-
-```
-AdtJsComponents.initInputClear();
-```
+`data-adt-input-clear` with JSON options: `selector` (inputs to clear, required) and `confirmMessage`.
 
 ```html
-<div data-adt-input-clear="{selector: '.input-clear-all', confirmMessage: 'Do you really want to clear all inputs?'}">Clear all</div>
-<div data-adt-input-clear="{selector: '.input-clear-special'}">Clear special</div>
+<div data-adt-input-clear='{"selector": ".input-clear-all", "confirmMessage": "Do you really want to clear all inputs?"}'>Clear all</div>
+<div data-adt-input-clear='{"selector": ".input-clear-special"}'>Clear special</div>
 
 <input type="text" name="input1" class="input-clear-all input-clear-special">
 <input type="text" name="input2" class="input-clear-all">

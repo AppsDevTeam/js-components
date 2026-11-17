@@ -1,12 +1,7 @@
 import flatpickr from "flatpickr";
 import 'flatpickr/dist/flatpickr.min.css';
-
-// timepicker is a jQuery plugin attaching to the global $ (provided by the bundler).
-// Plain side-effect import works in both webpack and Vite; the "script-loader!" prefix
-// was webpack-only and unresolvable in Vite/Rollup.
-import 'timepicker';
-import 'timepicker/jquery.timepicker.min.css';
 import observe from '../observe';
+import dataOptions from '../data';
 
 const locale = document.querySelector('html').getAttribute('lang');
 
@@ -19,15 +14,6 @@ async function loadFlatpickrLocale(loc) {
 	if (!key) return null;
 	const mod = await flatpickrLocales[key]();
 	return mod.default[loc];
-}
-
-function initTime(input, options) {
-	$(input).timepicker({
-		scrollDefault: 'now',
-		timeFormat: options.format,
-		minTime: options.minTime,
-		maxTime: options.maxTime
-	});
 }
 
 async function initDate(input, options) {
@@ -43,10 +29,15 @@ async function initDate(input, options) {
 
 	flatpickr(input, {
 		dateFormat: options.format, // default datetime-local
-		enableTime: options.type === 'datetime' || options.type === 'datetime-local',
+		enableTime: ['time', 'datetime', 'datetime-local'].includes(options.type),
+		// type=time: only the time picker (formerly the jQuery plugin timepicker), format e.g. H:i
+		noCalendar: options.type === 'time',
+		minTime: options.minTime || null,
+		maxTime: options.maxTime || null,
 		time_24hr: true,
 		locale: localeData,
-		defaultDate: options.value ? new Date(options.value) : null,
+		// a time (14:30) is parsed by dateFormat, new Date() would make an Invalid Date of it
+		defaultDate: options.value ? (options.type === 'time' ? options.value : new Date(options.value)) : null,
 		minDate: options.minDate ? new Date(options.minDate) : null,
 		maxDate: options.maxDate ? new Date(options.maxDate) : null,
 		allowInput: options.allowInput ? options.allowInput : null,
@@ -58,15 +49,11 @@ async function initDate(input, options) {
 
 function run(options) {
 	observe('[data-adt-date-input]', function(el) {
-		const options = $(el).data('adt-date-input');
+		const options = dataOptions(el, 'data-adt-date-input');
 		options.type = el.getAttribute('type');
 
 		el.setAttribute('type', 'text');
-		if (options.type === 'time') {
-			initTime(el, options);
-		} else {
-			initDate(el, options);
-		}
+		initDate(el, options);
 	});
 }
 

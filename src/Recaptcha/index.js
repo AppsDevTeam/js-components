@@ -1,4 +1,5 @@
 import naja from 'naja';
+import dataOptions from '../data';
 
 let recaptchaScript = null;
 
@@ -29,7 +30,10 @@ async function submitWithRecaptcha(submitter, options) {
 	await loadRecaptchaScript();
 
 	const token = await grecaptcha.execute(siteKey, {action: 'submit'});
-	$(submitter).closest('form').find('input[name=recaptchaToken]').val(token);
+	const tokenInput = submitter.form?.querySelector('input[name=recaptchaToken]');
+	if (tokenInput) {
+		tokenInput.value = token;
+	}
 
 	if (options.callback) {
 		window[options.callback]();
@@ -46,11 +50,15 @@ async function run(options) {
 	addHeadStyle();
 	loadRecaptchaScript();
 
-	$(document).on('click', '[data-adt-recaptcha] [type=submit]', function(e) {
+	document.addEventListener('click', (e) => {
+		const submitter = e.target.closest('[data-adt-recaptcha] [type=submit]');
+		if (!submitter) {
+			return;
+		}
 		e.preventDefault();
 		e.stopPropagation();
 
-		submitWithRecaptcha(this, $.extend(true, {}, options, $(this).data('adt-recaptcha')));
+		submitWithRecaptcha(submitter, { ...options, ...dataOptions(submitter, 'data-adt-recaptcha') });
 	});
 }
 

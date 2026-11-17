@@ -1,9 +1,12 @@
 function run(options) {
-	$(document).on('click', '[data-adt-input-clear]', function () {
-		const options = $(this).data('adt-input-clear') || {};
-		const selector = options.selector;
+	document.addEventListener('click', (e) => {
+		const button = e.target.closest('[data-adt-input-clear]');
+		if (!button) {
+			return;
+		}
 
-		if (!selector) {
+		const options = JSON.parse(button.getAttribute('data-adt-input-clear') || '{}');
+		if (!options.selector) {
 			console.error('You have to set the option.selector in JS component InputClear.');
 			return;
 		}
@@ -12,7 +15,10 @@ function run(options) {
 			return;
 		}
 
-		$(selector).val('');
+		document.querySelectorAll(options.selector).forEach(input => {
+			input.value = '';
+			input.dispatchEvent(new Event('change', { bubbles: true }));
+		});
 	});
 }
 

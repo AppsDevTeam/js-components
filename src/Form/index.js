@@ -119,13 +119,17 @@ function run(options) {
 		}
 	});
 
-	$(document).on('input', '[data-adt-submit-form] input, [data-adt-submit-form] textarea, [data-adt-submit-form] select', function() {
-		this.classList.remove('is-invalid');
-		if (isList(this)) {
-			$(this).parent().parent().find('.is-invalid').removeClass('is-invalid');
+	document.addEventListener('input', (e) => {
+		const input = e.target;
+		if (!input.matches?.('[data-adt-submit-form] input, [data-adt-submit-form] textarea, [data-adt-submit-form] select')) {
+			return;
 		}
-		if (this.parentNode.classList.contains('input-group')) {
-			this.parentNode.classList.remove('is-invalid');
+		input.classList.remove('is-invalid');
+		if (isList(input)) {
+			input.parentNode.parentNode.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+		}
+		if (input.parentNode.classList.contains('input-group')) {
+			input.parentNode.classList.remove('is-invalid');
 		}
 	});
 

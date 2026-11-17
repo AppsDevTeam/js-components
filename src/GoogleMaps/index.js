@@ -1,6 +1,7 @@
 import { Loader } from "@googlemaps/js-api-loader"
 import styles from './styles.json';
 import observe from '../observe';
+import dataOptions from '../data';
 
 function run(options) {
 	if (!options.enabled) return;
@@ -12,7 +13,7 @@ function run(options) {
 	
 	loader.load().then(() => {
 		observe('[data-adt-google-maps]', function(el) {
-			const options = $(el).data('adt-google-maps');
+			const options = dataOptions(el, 'data-adt-google-maps');
 			const center = { lat: options.lat, lng: options.lng };
 			const map = new google.maps.Map(el, {
 				center,

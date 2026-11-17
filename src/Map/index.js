@@ -6,6 +6,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { decode as decodeFlexPolyline } from '@here/flexpolyline';
 import {defaultRouteSettings} from './route.types.js';
 import observe from '../observe';
+import dataOptions from '../data';
 
 let siteKey;
 let markerImg;
@@ -904,7 +905,7 @@ async function toggleMarker(mapElement, markerId, selected, recalculate = true) 
 function setOrder(mapElement, markerId, orderNumber) {
 	let color = null;
 	const map = mapInstancesById.get(mapElement.id) ?? mapInstances.get(mapElement);
-	const settings = $(mapElement).data('adt-map');
+	const settings = dataOptions(mapElement, 'data-adt-map');
 	const markers = markerInstances.get(map);
 	const marker = markers?.get(markerId);
 	if (settings && settings.route && settings.route.enabled) {
