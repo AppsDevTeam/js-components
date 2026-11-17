@@ -14,8 +14,10 @@ import 'tinymce/plugins/lists';
 
 import 'tinymce-i18n/langs5/cs';
 
+import observe from '../observe';
+
 async function run(options) {
-	$.observe('[data-adt-tinymce]', function(el) {
+	observe('[data-adt-tinymce]', function(el) {
 		tinymce.init({
 			target: el,
 			language: 'cs',

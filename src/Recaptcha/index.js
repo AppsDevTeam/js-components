@@ -1,5 +1,6 @@
-let isRecaptchaScriptLoading = false;
-let recaptchaTimeouts = {};
+import naja from 'naja';
+
+let recaptchaScript = null;
 
 // Inicializujeme ve volání run
 let siteKey;
@@ -10,60 +11,46 @@ function addHeadStyle()  {
 	document.head.appendChild(el);
 }
 
-function loadRecaptchaScriptAsync() {
-	return new Promise((resolve, reject) => {
-		if (isRecaptchaScriptLoading) return reject();
+function loadRecaptchaScript() {
+	if (!recaptchaScript) {
+		recaptchaScript = new Promise((resolve) => {
+			if (typeof grecaptcha === 'object') return resolve();
 
-		isRecaptchaScriptLoading = true;
-
-		if (typeof grecaptcha === 'object') return resolve();
-
-		const el = document.createElement("script");
-		el.src = "https://www.google.com/recaptcha/api.js?render=" + siteKey;
-		el.onload = () => {
-			isRecaptchaScriptLoading = false;
-			resolve();
-		};
-		document.body.appendChild(el);
-	});
+			const el = document.createElement("script");
+			el.src = "https://www.google.com/recaptcha/api.js?render=" + siteKey;
+			el.onload = () => resolve();
+			document.body.appendChild(el);
+		}).then(() => new Promise(resolve => grecaptcha.ready(resolve)));
+	}
+	return recaptchaScript;
 }
 
-function initRecaptcha($submit, e, options) {
-	grecaptcha.execute(siteKey, {action: 'submit'}).then(function (token) {
-		$submit.closest('form').find('input[name=recaptchaToken]').val(token);
+async function submitWithRecaptcha(submitter, options) {
+	await loadRecaptchaScript();
 
-		if (options.callback) {
-			window[options.callback]();
-		} else {
-			$submit.adtAjax(e)
-		}
-	});
-}
+	const token = await grecaptcha.execute(siteKey, {action: 'submit'});
+	$(submitter).closest('form').find('input[name=recaptchaToken]').val(token);
 
-function afterSnippetUpdate($el, options) {
-	$el.find('[data-adt-recaptcha] [type=submit]').each(function() {
-		$(this).on('click', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-
-			initRecaptcha($(this), e, $.extend(true, options, $(this).data('adt-recaptcha')));
+	if (options.callback) {
+		window[options.callback]();
+	} else {
+		naja.uiHandler.submitForm(submitter).catch(() => {
+			// errors are handled by naja.addEventListener('error', ...)
 		});
-	});
+	}
 }
 
 async function run(options) {
 	siteKey = options.siteKey;
 
 	addHeadStyle();
+	loadRecaptchaScript();
 
-	try {
-		await loadRecaptchaScriptAsync();
-	} catch {
-		// script uz se nacita, nechceme nacitat znovu
-	}
+	$(document).on('click', '[data-adt-recaptcha] [type=submit]', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
 
-	grecaptcha.ready(() => {
-		$.nette.ext('live').after($el => afterSnippetUpdate($el, options));
+		submitWithRecaptcha(this, $.extend(true, {}, options, $(this).data('adt-recaptcha')));
 	});
 }
 

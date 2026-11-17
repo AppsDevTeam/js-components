@@ -1,48 +1,50 @@
+import naja from 'naja';
+
+const SELECTOR = '[data-adt-redraw-snippet]';
+const BUTTON_SELECTOR = 'button, input[type="button"], input[type="submit"]';
+const DEBOUNCE = 500;
+
+const debounceTimers = new WeakMap();
+
+// Submits the form via the submit button named in data-adt-redraw-snippet,
+// the server redraws the snippets depending on the field.
+function redraw(el, event) {
+	const submitter = el.closest('form')?.querySelector(`[name="${CSS.escape(el.getAttribute('data-adt-redraw-snippet'))}"]`);
+	if (!submitter) {
+		return;
+	}
+
+	naja.uiHandler.submitForm(submitter, {
+		history: false,
+		// a newer redraw aborts the previous one, other requests are left alone
+		unique: 'adt-redraw-snippet',
+	}, event).catch(() => {
+		// errors are handled by naja.addEventListener('error', ...)
+	});
+}
+
+function redrawLater(el) {
+	clearTimeout(debounceTimers.get(el));
+	debounceTimers.set(el, setTimeout(() => redraw(el), DEBOUNCE));
+}
+
 async function run(options) {
-	function applyEventHandlers(el) {
-		var $el= $(el);
-		if ($el.is('button, input[type="button"], input[type="submit"]')) {
-			$el.on('click', sendNetteAjax);
-		} else if ($el.is('input:not([type="button"]):not([type="submit"]), select, textarea')) {
-			let debounceTimer;
-			$el.on('input', function(e) {
-				clearTimeout(debounceTimer);
-				debounceTimer = setTimeout(() => sendNetteAjax(e), 500);
-			});
-		}
-	}
-
-	function sendNetteAjax(e) {
-		const $el = $(e.currentTarget);
-		$el.closest('form').find('[name="' + $el.attr('data-adt-redraw-snippet') + '"]').netteAjax(e);
-	}
-
-	const observer = new MutationObserver(mutations => {
-		mutations.forEach(mutation => {
-			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach(node => {
-					if (node.nodeType === 1) {
-						if (node.hasAttribute("data-adt-redraw-snippet")) {
-							applyEventHandlers(node);
-						}
-
-						node.querySelectorAll('[data-adt-redraw-snippet]').forEach(child => {
-							applyEventHandlers(child);
-						});
-					}
-				});
+	// jQuery handlers to catch events triggered by jQuery plugins as well
+	$(document)
+		.on('click', SELECTOR, function (e) {
+			if (this.matches(BUTTON_SELECTOR)) {
+				redraw(this, e.originalEvent);
 			}
+		})
+		.on('input', SELECTOR, function () {
+			if (!this.matches(BUTTON_SELECTOR)) {
+				redrawLater(this);
+			}
+		})
+		// Select2 hides the native select and triggers only change
+		.on('change', `select${SELECTOR}`, function () {
+			redrawLater(this);
 		});
-	});
-
-	observer.observe(document.body, {
-		childList: true,
-		subtree: true,
-	});
-
-	document.querySelectorAll('[data-adt-redraw-snippet]').forEach(function(el) {
-		applyEventHandlers(el);
-	});
 }
 
 export default { run }

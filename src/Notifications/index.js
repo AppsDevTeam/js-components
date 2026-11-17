@@ -1,7 +1,15 @@
+import naja from 'naja';
 import { getToken, deleteToken } from "firebase/messaging";
 
 const ENABLE_SELECTOR = '[data-adt-notifications-enable]';
 const DISABLE_SELECTOR = '[data-adt-notifications-disable]';
+
+// background request - it must not abort the user's requests nor change the history
+const sendSignal = (url) => {
+    naja.makeRequest('GET', url, null, { history: false, unique: false }).catch(function (err) {
+        console.error(err);
+    });
+};
 
 const run = (config) => {
     const updateButtons = () => {
@@ -42,9 +50,7 @@ const run = (config) => {
                     .then(function (currentToken) {
                         if (currentToken) {
                             window.adtNotificationsToken = currentToken;
-                            $.nette.ajax({
-                                url: config.setFirebaseTokenLink.replace('__firebaseToken__', currentToken)
-                            });
+                            sendSignal(config.setFirebaseTokenLink.replace('__firebaseToken__', currentToken));
                             updateButtons();
                         } else {
                             alert(_('appJs.firebase.error.notificationsPermissionError'));
@@ -80,9 +86,7 @@ const run = (config) => {
                 });
         }
 
-        $.nette.ajax({
-            url: config.removeAllFirebaseTokensLink
-        });
+        sendSignal(config.removeAllFirebaseTokensLink);
 
         window.adtNotificationsToken = null;
         updateButtons();
@@ -134,7 +138,7 @@ const run = (config) => {
         updateButtons();
     }
 
-    $(document).on('ajaxComplete', function () {
+    naja.addEventListener('complete', function () {
         updateButtons();
     });
 }

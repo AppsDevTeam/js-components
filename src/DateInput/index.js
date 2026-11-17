@@ -6,6 +6,7 @@ import 'flatpickr/dist/flatpickr.min.css';
 // was webpack-only and unresolvable in Vite/Rollup.
 import 'timepicker';
 import 'timepicker/jquery.timepicker.min.css';
+import observe from '../observe';
 
 const locale = document.querySelector('html').getAttribute('lang');
 
@@ -56,20 +57,16 @@ async function initDate(input, options) {
 }
 
 function run(options) {
-	$.nette.ext('live').after(function($el) {
-		$el.find('[data-adt-date-input]').each(function() {
-			const data = $(this).data('adt-date-input');
+	observe('[data-adt-date-input]', function(el) {
+		const options = $(el).data('adt-date-input');
+		options.type = el.getAttribute('type');
 
-			const options = $(this).data('adt-date-input');
-			options.type = $(this).attr('type');
-
-			$(this).attr('type', 'text');
-			if (options.type === 'time') {
-				initTime(this, options);
-			} else {
-				initDate(this, options);
-			}
-		});
+		el.setAttribute('type', 'text');
+		if (options.type === 'time') {
+			initTime(el, options);
+		} else {
+			initDate(el, options);
+		}
 	});
 }
 

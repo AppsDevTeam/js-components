@@ -10,11 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/AppsDevTeam/js-components.git"
   },
-  "dependencies": {
-    "nette.ajax.js": "^2.3.0"
-  },
   "peerDependencies": {
     "jquery": "^3.4.1",
+    "naja": "^3.0.0",
     "select2": "^4.0.13",
     "select2-bootstrap-5-theme": "^1.1.1",
     "autonumeric": "^4.6.0",
@@ -32,6 +30,7 @@
     "firebase": "^12.10.0"
   },
   "peerDependenciesMeta": {
+    "naja": { "optional": true },
     "select2": { "optional": true },
     "select2-bootstrap-5-theme": { "optional": true },
     "autonumeric": { "optional": true },
