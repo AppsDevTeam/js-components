@@ -35,7 +35,13 @@ import { observe } from 'adt-js-components';
 observe('[data-my-component]', (el) => { ... });                 // once for each element
 observe('[data-my-component]', (els) => { ... }, { batch: true }); // all elements added at once
 observe('[data-my-component]', (el) => { ... }, { once: true });   // first element only
+observe('[data-my-component]', (el) => { ... }, {
+	attribute: 'data-my-component', // called again when the attribute changes
+	onRemove: (el) => { ... },      // element left the document (a moved element is not removed)
+});
 ```
+
+Attributes are observed only when some watcher asks for them.
 
 `observe()` returns a function which stops watching. `$.observe(selector, callback)` is kept as an alias.
 

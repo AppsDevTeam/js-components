@@ -3,15 +3,28 @@
 // Each element is passed only once, even when it is moved in the DOM.
 //
 // Options:
-//   batch - callback gets an array of all elements found at once instead of one element
-//   once  - callback is called for the first element found only, then the watcher stops
+//   batch     - callback gets an array of all elements found at once instead of one element
+//   once      - callback is called for the first element found only, then the watcher stops
+//   attribute - callback is called again for an element when this attribute changes
+//   onRemove  - called for an element which left the document; when it is added back,
+//               callback is called for it again
 //
 // Returns a function that stops watching.
 //
-// All watchers share one MutationObserver.
+// All watchers share one MutationObserver. Attributes are observed only when a watcher
+// asks for them, and only those.
 
 const watchers = new Set();
+const attributes = new Set();
 let mutationObserver = null;
+
+function startObserving() {
+	mutationObserver.observe(document.body, {
+		childList: true,
+		subtree: true,
+		...(attributes.size ? { attributes: true, attributeFilter: [...attributes] } : {}),
+	});
+}
 
 function findAll(root, selector) {
 	const elements = root.matches(selector) ? [root] : [];
@@ -19,7 +32,7 @@ function findAll(root, selector) {
 	return elements;
 }
 
-function process(watcher, roots) {
+function findNew(watcher, roots) {
 	const elements = [];
 	for (const root of roots) {
 		for (const el of findAll(root, watcher.selector)) {
@@ -29,7 +42,33 @@ function process(watcher, roots) {
 			}
 		}
 	}
+	return elements;
+}
 
+function findRemoved(watcher, roots) {
+	const elements = new Set();
+	for (const root of roots) {
+		for (const el of findAll(root, watcher.selector)) {
+			// not moved, really removed
+			if (watcher.seen.has(el) && !el.isConnected) {
+				elements.add(el);
+			}
+		}
+	}
+	return elements;
+}
+
+function findChanged(watcher, targets, elements) {
+	for (const target of targets) {
+		if (target.isConnected && target.matches(watcher.selector) && !elements.includes(target)) {
+			watcher.seen.add(target);
+			elements.push(target);
+		}
+	}
+	return elements;
+}
+
+function call(watcher, elements) {
 	if (!elements.length) {
 		return;
 	}
@@ -45,24 +84,48 @@ function process(watcher, roots) {
 }
 
 function handleMutations(mutations) {
-	const roots = [];
+	const added = [];
+	const removed = [];
+	const changed = new Map();
 	for (const mutation of mutations) {
+		if (mutation.type === 'attributes') {
+			if (!changed.has(mutation.attributeName)) {
+				changed.set(mutation.attributeName, new Set());
+			}
+			changed.get(mutation.attributeName).add(mutation.target);
+			continue;
+		}
+
 		for (const node of mutation.addedNodes) {
 			if (node.nodeType === Node.ELEMENT_NODE && node.isConnected) {
-				roots.push(node);
+				added.push(node);
+			}
+		}
+		for (const node of mutation.removedNodes) {
+			if (node.nodeType === Node.ELEMENT_NODE && !node.isConnected) {
+				removed.push(node);
 			}
 		}
 	}
 
-	if (!roots.length) {
-		return;
-	}
-
 	// a callback may add or remove watchers
 	for (const watcher of [...watchers]) {
-		if (watchers.has(watcher)) {
-			process(watcher, roots);
+		if (!watchers.has(watcher)) {
+			continue;
 		}
+
+		if (watcher.onRemove) {
+			for (const el of findRemoved(watcher, removed)) {
+				watcher.seen.delete(el);
+				watcher.onRemove(el);
+			}
+		}
+
+		const elements = findNew(watcher, added);
+		if (watcher.attribute && changed.has(watcher.attribute)) {
+			findChanged(watcher, changed.get(watcher.attribute), elements);
+		}
+		call(watcher, elements);
 	}
 }
 
@@ -74,18 +137,25 @@ function onBodyReady(callback) {
 	}
 }
 
-export default function observe(selector, callback, { batch = false, once = false } = {}) {
-	const watcher = { selector, callback, batch, once, seen: new WeakSet() };
+export default function observe(selector, callback, { batch = false, once = false, attribute = null, onRemove = null } = {}) {
+	const watcher = { selector, callback, batch, once, attribute, onRemove, seen: new WeakSet() };
 	watchers.add(watcher);
+
+	if (attribute && !attributes.has(attribute)) {
+		attributes.add(attribute);
+		if (mutationObserver) {
+			startObserving();
+		}
+	}
 
 	onBodyReady(() => {
 		if (!mutationObserver) {
 			mutationObserver = new MutationObserver(handleMutations);
-			mutationObserver.observe(document.body, { childList: true, subtree: true });
+			startObserving();
 		}
 
 		if (watchers.has(watcher)) {
-			process(watcher, [document.body]);
+			call(watcher, findNew(watcher, [document.body]));
 		}
 	});
 
