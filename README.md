@@ -40,6 +40,24 @@ import naja from 'naja';
 naja.initialize();
 ```
 
+## Callbacks
+
+Attributes naming a function (`data-adt-submit-form-before-callback`, `data-adt-replicator-add-before-callback`,
+callbacks of `Map` and `Recaptcha`) call only functions the project registered:
+
+```
+AdtJsComponents.registerCallbacks({
+	myConfirm: () => confirm('Do you really want to submit the form?'),
+	myAlert: () => alert('Data was saved.'),
+});
+```
+
+A name that is not registered falls back to a function of `window` with a deprecation warning in the console, only
+when it is a plain identifier and a function the page defined itself: built-ins (`eval`, `Function`, `setTimeout`,
+`fetch`, `open`, ... - anything native) and names of `Object.prototype` / `Function.prototype` (`constructor`, ...)
+are refused - an injected attribute could otherwise call them with arguments of its choice. A refused or missing
+before callback cancels the action. The fallback will be removed in the next major version.
+
 ## Observing elements
 
 Components are initialized for elements already in the page and for elements added later (snippet redraw, replicator, modal...).
@@ -163,20 +181,11 @@ validation of all forms, `window.Nette` for Naja - so the project does not impor
 `data-adt-submit-form` additionally get the spinner on the submit button, locking while submitting and errors
 rendered next to the inputs (`data-adt-errors-for`).
 
-On each submit before and after callback can be added.
-Before callback is invoked before submit and form is not submitted if the function return false.
-After callback is invoked after successed submit.
+The submitter (or the form) can name a before and an after callback registered by `registerCallbacks()` (see
+[Callbacks](#callbacks)). The before callback runs before the submit, the form is not submitted when it does not
+return a truthy value. The after callback runs after a successful submit with `(payload, detail)`.
 
 ```html
-<script>
-	function myConfirm() {
-		return confirm('Do you realy want to submit the form?');
-	}
-	function myAlert() {
-		alert('Data was saved.');
-	}
-</script>
-
 <button ... data-adt-submit-form-before-callback="myConfirm" data-adt-submit-form-after-callback="myAlert">Submit</button>
 ```
 
@@ -190,7 +199,8 @@ are built only when they get close to it or get focus.
 `data-adt-replicator="<html of a new row>"` (kdyby/replicator) with rows `[data-adt-replicator-item]`, buttons
 `[data-adt-replicator-add]` and `[data-adt-replicator-remove]`. A new row gets `_new_<n>` instead of `_new_` in ids,
 names, labels and Nette rules (toggles included). `data-adt-replicator-add-before-callback="fn"` on the add button
-can cancel adding (`window.fn(button)` returns false), `data-adt-replicator-depth` = depth of a nested replicator.
+can cancel adding (`fn(button)` registered by `registerCallbacks()`, see [Callbacks](#callbacks), does not return a
+truthy value), `data-adt-replicator-depth` = depth of a nested replicator.
 
 ### Input Clear
 

@@ -1,5 +1,6 @@
 import observe from './observe';
 import { registerChartPlugins } from './Chart/plugins';
+import { registerCallbacks } from './callbacks';
 
 const loadedComponents = new Set();
 let componentsConfig = null;
@@ -149,5 +150,6 @@ export default {
 	init,
 	registerModules,
 	registerChartPlugins,
+	registerCallbacks,
 	loadScssModule,
 };

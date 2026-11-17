@@ -1,3 +1,4 @@
+import { resolveCallback } from '../callbacks';
 import observe from '../observe';
 
 // Replicator of Nette forms (kdyby/replicator): <div data-adt-replicator="<html of a new row>"> with rows
@@ -45,7 +46,7 @@ class Replicator {
 
 	add(button) {
 		const callback = button.getAttribute('data-adt-replicator-add-before-callback');
-		if (callback && !window[callback](button)) {
+		if (callback && !resolveCallback(callback)?.(button)) {
 			return;
 		}
 		this.addRow();

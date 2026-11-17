@@ -7,6 +7,7 @@ import { decode as decodeFlexPolyline } from '@here/flexpolyline';
 import {defaultRouteSettings} from './route.types.js';
 import observe from '../observe';
 import dataOptions from '../data';
+import { resolveCallback } from '../callbacks';
 
 let siteKey;
 let markerImg;
@@ -226,11 +227,12 @@ async function run(options) {
 			calculateRoute(map);
 		}
 
-		if (callback) {
-			map.on('zoomend', window[callback]);
-			map.on('moveend', window[callback]);
-			map.on('dragend', window[callback]);
-			map.on('click', window[callback]);
+		const callbackFn = resolveCallback(callback);
+		if (callbackFn) {
+			map.on('zoomend', callbackFn);
+			map.on('moveend', callbackFn);
+			map.on('dragend', callbackFn);
+			map.on('click', callbackFn);
 		}
 	}
 
@@ -298,10 +300,10 @@ function enableRectangleSelection(map, onSelectionChange, showSelectionOrder) {
 				map.removeLayer(rectangle);
 				rectangle = null;
 
-				if (onSelectionChange && window[onSelectionChange]) {
+				if (resolveCallback(onSelectionChange)) {
 					const order = selectionOrder.get(map);
 					const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
-					window[onSelectionChange](orderedIds);
+					resolveCallback(onSelectionChange)(orderedIds);
 				}
 
 				const settings = routeSettingsMap.get(map);
@@ -449,10 +451,10 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 					selectMarker(mapMarker, map, showSelectionOrder);
 				}
 
-				if (onSelectionChange && window[onSelectionChange]) {
+				if (resolveCallback(onSelectionChange)) {
 					const order = selectionOrder.get(map);
 					const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
-					window[onSelectionChange](orderedIds);
+					resolveCallback(onSelectionChange)(orderedIds);
 				}
 
 				const settings = routeSettingsMap.get(map);
@@ -460,35 +462,35 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 					calculateRoute(map, true);
 				}
 
-				if (originalCallback && window[originalCallback]) {
-					window[originalCallback](e);
+				if (resolveCallback(originalCallback)) {
+					resolveCallback(originalCallback)(e);
 				}
 				return;
 			}
 
-			if (markerInfoCallback && window[markerInfoCallback]) {
+			if (resolveCallback(markerInfoCallback)) {
 				L.DomEvent.stopPropagation(e);
 				L.DomEvent.preventDefault(e);
-				window[markerInfoCallback](marker);
+				resolveCallback(markerInfoCallback)(marker);
 				return;
 			}
 
-			if (originalCallback && window[originalCallback]) {
-				window[originalCallback](e);
+			if (resolveCallback(originalCallback)) {
+				resolveCallback(originalCallback)(e);
 			}
 
 			L.DomEvent.stopPropagation(e);
 		});
 	} else if (markerInfoCallback || originalCallback) {
 		mapMarker.on('click', function (e) {
-			if (markerInfoCallback && window[markerInfoCallback]) {
+			if (resolveCallback(markerInfoCallback)) {
 				L.DomEvent.stopPropagation(e);
 				L.DomEvent.preventDefault(e);
-				window[markerInfoCallback](marker);
+				resolveCallback(markerInfoCallback)(marker);
 				return;
 			}
-			if (originalCallback && window[originalCallback]) {
-				window[originalCallback](e);
+			if (resolveCallback(originalCallback)) {
+				resolveCallback(originalCallback)(e);
 			}
 		});
 	}
@@ -496,7 +498,7 @@ function createMarker(marker, options, selectedOptions, cluster = null, selectab
 	if (marker.popup) {
 		mapMarker.bindPopup(marker.popup);
 	} else if (marker.popupCallback) {
-		mapMarker.bindPopup(() => window[marker.popupCallback](mapMarker));
+		mapMarker.bindPopup(() => resolveCallback(marker.popupCallback)?.(mapMarker));
 	}
 
 	if (cluster) {
@@ -619,9 +621,9 @@ async function applyPreselectedMarkers(map, markersData, showSelectionOrder, onS
 		}
 	}
 
-	if (onSelectionChange && window[onSelectionChange] && order.size > 0) {
+	if (resolveCallback(onSelectionChange) && order.size > 0) {
 		const orderedIds = Array.from(order.entries()).sort((a, b) => a[1] - b[1]).map(e => e[0]);
-		window[onSelectionChange](orderedIds);
+		resolveCallback(onSelectionChange)(orderedIds);
 	}
 
 	const settings = routeSettingsMap.get(map);
@@ -702,8 +704,8 @@ async function calculateRoute(map, invalidateCache = false) {
 	if (routeMarkers.length < (hasCustomStart || hasCustomEnd ? 1 : 2)) return;
 
 	const beforeCallback = onBeforeRouteCalculationMap.get(map);
-	if (beforeCallback && window[beforeCallback]) {
-		window[beforeCallback]();
+	if (resolveCallback(beforeCallback)) {
+		resolveCallback(beforeCallback)();
 	}
 
 	const isHere = routeSettings.mapProvider === MAP_PROVIDER.HERE;
@@ -723,8 +725,8 @@ async function calculateRoute(map, invalidateCache = false) {
 	} catch (error) {
 		console.error('Error calculating route:', error);
 		const afterCallback = onAfterRouteCalculationMap.get(map);
-		if (afterCallback && window[afterCallback]) {
-			window[afterCallback]({}, 0, 0);
+		if (resolveCallback(afterCallback)) {
+			resolveCallback(afterCallback)({}, 0, 0);
 		}
 		return;
 	}
@@ -753,8 +755,8 @@ async function calculateRoute(map, invalidateCache = false) {
 	});
 
 	const afterCallback = onAfterRouteCalculationMap.get(map);
-	if (afterCallback && window[afterCallback]) {
-		window[afterCallback](routeParts, totalLength, totalDuration, allCoords);
+	if (resolveCallback(afterCallback)) {
+		resolveCallback(afterCallback)(routeParts, totalLength, totalDuration, allCoords);
 	}
 }
 
