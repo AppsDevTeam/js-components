@@ -1,4 +1,5 @@
 import observe from './observe';
+import { registerChartPlugins } from './Chart/plugins';
 
 const loadedComponents = new Set();
 let componentsConfig = null;
@@ -19,6 +20,7 @@ const registeredModules = { fancyadmin: {}, app: {} };
 // [data-adt-<key>]), loader]. Each one is its own chunk loaded once its element shows up in the document.
 const BUILTINS = {
 	AjaxSelect: ['ajax-select', null, () => import('./AjaxSelect/index.js')],
+	Chart: ['chart', 'canvas[data-adt-chart]', () => import('./Chart/index.js')],
 	CurrencyInput: ['currency-input', null, () => import('./CurrencyInput/index.js')],
 	DateInput: ['date-input', null, () => import('./DateInput/index.js')],
 	// any <form>: nette-forms validation, spinner/locking/errors of forms with data-adt-submit-form
@@ -146,5 +148,6 @@ export const loadScssModule = (styles) => {
 export default {
 	init,
 	registerModules,
+	registerChartPlugins,
 	loadScssModule,
 };

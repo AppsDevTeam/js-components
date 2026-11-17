@@ -120,6 +120,27 @@ export default { run };
 
 `data-adt-currency-input` (AutoNumeric).
 
+### Chart
+
+`<canvas data-adt-chart='{"type": "line", "data": {...}, "options": {...}}'>` - [Chart.js](https://www.chartjs.org)
+with the configuration from the attribute. A redrawn snippet or a changed attribute updates the chart, a removed canvas
+destroys it.
+
+- `format` - [Intl.NumberFormat options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat#options)
+  of the values (ticks of the value axis and the tooltip, unless the options set their own callbacks), language from
+  `<html lang>`, e.g. `{"style": "currency", "currency": "CZK", "maximumFractionDigits": 0}`.
+- `plugins` - names of Chart.js plugins the project registered (callbacks cannot be in JSON):
+
+```
+AdtJsComponents.registerChartPlugins({
+	compactTicks: { id: 'compactTicks', beforeInit(chart) { ... } },
+});
+```
+
+```html
+<canvas data-adt-chart='{"type": "bar", "data": {...}, "plugins": ["compactTicks"]}'></canvas>
+```
+
 ### Date Input
 
 `data-adt-date-input` with JSON options (`format`, `value`, `minDate`, `maxDate`, `minTime`, `maxTime`, `altInput`...) -
