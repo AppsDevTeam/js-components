@@ -57,9 +57,9 @@ const getComponentsConfig = () => {
 	return componentsConfig;
 };
 
-// Runs the component once the first `[data-adt-<selector>]` element shows up in the document.
-const init = (selector, path) => {
-	observe(`[data-adt-${selector}]`, () => {
+// Runs the component once the first `[data-adt-<selector>]` element (or `cssSelector`) shows up in the document.
+const init = (selector, path, cssSelector = `[data-adt-${selector}]`) => {
+	observe(cssSelector, () => {
 		if (loadedComponents.has(path)) return;
 		loadedComponents.add(path);
 
@@ -86,7 +86,12 @@ const initGoogleMaps = () => init('google-maps', 'GoogleMaps');
 const initRecaptcha = () => init('recaptcha', 'Recaptcha');
 const initRedrawSnippet = () => init('redraw-snippet', 'RedrawSnippet');
 const initSelect2 = () => init('select2', 'Select2');
-const initSubmitForm = () => init('submit-form', 'SubmitForm');
+// Any <form>: nette-forms validation, plus spinner, locking and errors of forms with data-adt-submit-form
+const initForm = () => init('submit-form', 'Form', 'form');
+const initSubmitForm = () => {
+	console.warn('adt-js-components: initSubmitForm() is deprecated, use initForm() (component Form)');
+	initForm();
+};
 const initTinyMCE = () => init('tinymce', 'TinyMCE');
 const initAjaxSelect = () => init('ajax-select', 'AjaxSelect');
 const initInputClear = () => init('input-clear', 'InputClear');
@@ -121,6 +126,7 @@ export default {
 	initRecaptcha,
 	initRedrawSnippet,
 	initSelect2,
+	initForm,
 	initSubmitForm,
 	initTinyMCE,
 	initAjaxSelect,

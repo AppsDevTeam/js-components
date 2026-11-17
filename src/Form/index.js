@@ -1,5 +1,5 @@
 import naja from 'naja';
-import Scrollparent from "scrollparent";
+import Nette from 'nette-forms';
 import observe from '../observe';
 
 function isList(el) {
@@ -41,13 +41,20 @@ function scrollToFirstError(form) {
 	}
 
 	// we have to find first scrollable element (it can be document or modal for example)
-	let scrollParent = Scrollparent(el);
-
-	if (scrollParent.tagName === 'BODY') {
-		scrollParent = document.scrollingElement || document.documentElement;
-	}
+	const scrollParent = getScrollParent(el);
 
 	scrollParent.scrollBy({top: el.getBoundingClientRect().top - 100, behavior: 'smooth'});
+}
+
+// nearest ancestor with scrollable overflow, otherwise the document
+function getScrollParent(el) {
+	for (let parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+		const style = getComputedStyle(parent);
+		if (/(auto|scroll|overlay)/.test(style.overflow + style.overflowY + style.overflowX)) {
+			return parent;
+		}
+	}
+	return document.scrollingElement || document.documentElement;
 }
 
 const SPINNER = '<span class="spinner-border spinner-border-sm"></span>';
@@ -129,43 +136,45 @@ function run(options) {
 		}
 	});
 
-	if (typeof Nette !== "undefined") {
-		Nette.showFormErrors = function(form, errors) {
-			// remove previously displayed error messages
-			form.querySelectorAll('[id$="-errors"]').forEach(el => {
-				el.replaceChildren();
-			});
+	// nette-forms validation of all forms (data-nette-rules); Naja takes it from window.Nette when
+	// submitting via AJAX. Taking over showFormErrors in the same module guarantees nette-forms is
+	// loaded before it is set.
+	window.Nette = Nette;
+	Nette.initOnLoad();
 
-			const alertErrors = [];
-			for (const error of errors) {
-				// because radio lists and checkbox lists contains one error message multiple times
-				const errorElementId = 'snippet-' + getErrorElementId(error.element) + '-errors';
-				const errorElement = document.getElementById(errorElementId);
-				if (!errorElement) {
-					alertErrors.push(error.message);
-					console.warn(`Element with ID "${errorElementId}" no exist.`);
-				} else if (![...errorElement.children].some(el => el.textContent === error.message)) {
-					// textContent, ne innerHTML: zprava muze obsahovat hodnotu z formulare nebo serveru,
-					// jako HTML by spustila vlozeny kod (DOM XSS)
-					const message = document.createElement('div');
-					message.textContent = error.message;
-					errorElement.append(message);
-				}
+	Nette.showFormErrors = function(form, errors) {
+		// remove previously displayed error messages
+		form.querySelectorAll('[id$="-errors"]').forEach(el => {
+			el.replaceChildren();
+		});
 
-				toggleInvalid(error.element, true);
+		const alertErrors = [];
+		for (const error of errors) {
+			// because radio lists and checkbox lists contains one error message multiple times
+			const errorElementId = 'snippet-' + getErrorElementId(error.element) + '-errors';
+			const errorElement = document.getElementById(errorElementId);
+			if (!errorElement) {
+				alertErrors.push(error.message);
+				console.warn(`Element with ID "${errorElementId}" no exist.`);
+			} else if (![...errorElement.children].some(el => el.textContent === error.message)) {
+				// textContent, not innerHTML: the message may contain a value from the form or the
+				// server, as HTML it would run injected code (DOM XSS)
+				const message = document.createElement('div');
+				message.textContent = error.message;
+				errorElement.append(message);
 			}
 
-			if (errors.length) {
-				scrollToFirstError(form);
-			}
+			toggleInvalid(error.element, true);
+		}
 
-			if (alertErrors.length) {
-				alert(alertErrors.join('\n'));
-			}
-		};
-	} else {
-		console.error('Package nette-forms is missing!');
-	}
+		if (errors.length) {
+			scrollToFirstError(form);
+		}
+
+		if (alertErrors.length) {
+			alert(alertErrors.join('\n'));
+		}
+	};
 
 	naja.uiHandler.addEventListener('interaction', (event) => {
 		// e.g. the form is invalid

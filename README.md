@@ -12,7 +12,7 @@ yarn add adt-js-components
 import AdtJsComponents from 'adt-js-components'
 ```
 
-Components sending AJAX requests (`SubmitForm`, `RedrawSnippet`, `Recaptcha`, `Notifications`) use [Naja](https://naja.js.org),
+Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`, `Notifications`) use [Naja](https://naja.js.org),
 the project has to install and initialize it:
 
 ```
@@ -50,9 +50,9 @@ Attributes are observed only when some watcher asks for them.
 - `nette.ajax.js` is replaced by Naja. `$.nette.ext(...)` extensions of the project have to be rewritten
   to [Naja events](https://naja.js.org/#/events), and forms and links with `class="ajax"` keep working.
 - `$.fn.adtAjax()` is removed, use `naja.uiHandler.submitForm(submitter)` or `naja.uiHandler.clickElement(link)`.
-- The after callback of `SubmitForm` gets `(payload, detail)`, where `detail` is the detail of the Naja `success` event
+- The after callback of `Form` (formerly `SubmitForm`) gets `(payload, detail)`, where `detail` is the detail of the Naja `success` event
   (`request`, `response`, `payload`, `options`), instead of `(payload, status, xhr, settings)`.
-- `SubmitForm` no longer aborts the previous request of the same element, Naja aborts the previous request itself
+- `Form` (formerly `SubmitForm`) no longer aborts the previous request of the same element, Naja aborts the previous request itself
   (option `unique`). Redraws of `RedrawSnippet` abort only the previous redraw.
 - `RedrawSnippet` redraws on `change` of a select as well, so it works with Select2.
 
@@ -129,13 +129,23 @@ Attribute `data-adt-select2` must be included in your HTML!
 AdtJsComponents.initSelect2();
 ```
 
-### Submit Form
-
-Attribute `data-adt-submit-form` must be included in your HTML!
+### Form
 
 ```
-AdtJsComponents.initSubmitForm();
+yarn add nette-forms
 ```
+
+```
+AdtJsComponents.initForm();
+```
+
+Loads once the page has any `<form>` (register `Form` among the builtin modules). It loads
+[nette-forms](https://github.com/nette/forms) itself - client-side validation of all forms, `window.Nette` for Naja -
+so the project does not import it. Forms with the attribute `data-adt-submit-form` additionally get the spinner
+on the submit button, locking while submitting and errors rendered next to the inputs (`data-adt-errors-for`).
+
+`initSubmitForm()` (component `SubmitForm` up to 3.0) is a deprecated alias of `initForm()`; a project registering
+`SubmitForm` in `registerModules()` has to register `Form` instead.
 
 On each submit before and after callback can be added.
 Before callback is invoked before submit and form is not submitted if the function return false.

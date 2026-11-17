@@ -1,6 +1,6 @@
 {
   "name": "adt-js-components",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "JavaScript components for Nette framework",
   "main": "index.js",
   "scripts": {
@@ -22,30 +22,62 @@
     "timepicker": "^1.13.4",
     "glightbox": "^3.0.7",
     "@googlemaps/js-api-loader": "^1.11.1",
-    "scrollparent": "^2.0.1",
     "tinymce": "^5.7.0",
     "tinymce-i18n": "^20.12.25",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "firebase": "^12.10.0"
+    "firebase": "^12.10.0",
+    "nette-forms": "^3.5.0"
   },
   "peerDependenciesMeta": {
-    "naja": { "optional": true },
-    "select2": { "optional": true },
-    "select2-bootstrap-5-theme": { "optional": true },
-    "autonumeric": { "optional": true },
-    "@here/flexpolyline": { "optional": true },
-    "flatpickr": { "optional": true },
-    "script-loader": { "optional": true },
-    "timepicker": { "optional": true },
-    "glightbox": { "optional": true },
-    "@googlemaps/js-api-loader": { "optional": true },
-    "scrollparent": { "optional": true },
-    "tinymce": { "optional": true },
-    "tinymce-i18n": { "optional": true },
-    "leaflet": { "optional": true },
-    "leaflet.markercluster": { "optional": true },
-    "firebase": { "optional": true }
+    "naja": {
+      "optional": true
+    },
+    "select2": {
+      "optional": true
+    },
+    "select2-bootstrap-5-theme": {
+      "optional": true
+    },
+    "autonumeric": {
+      "optional": true
+    },
+    "@here/flexpolyline": {
+      "optional": true
+    },
+    "flatpickr": {
+      "optional": true
+    },
+    "script-loader": {
+      "optional": true
+    },
+    "timepicker": {
+      "optional": true
+    },
+    "glightbox": {
+      "optional": true
+    },
+    "@googlemaps/js-api-loader": {
+      "optional": true
+    },
+    "tinymce": {
+      "optional": true
+    },
+    "tinymce-i18n": {
+      "optional": true
+    },
+    "leaflet": {
+      "optional": true
+    },
+    "leaflet.markercluster": {
+      "optional": true
+    },
+    "firebase": {
+      "optional": true
+    },
+    "nette-forms": {
+      "optional": true
+    }
   },
   "author": "Apps Dev Team",
   "license": "MIT",
