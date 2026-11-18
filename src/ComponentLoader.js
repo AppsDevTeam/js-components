@@ -1,4 +1,5 @@
 import observe from './observe';
+import { registerCallbacks } from './callbacks';
 
 const loadedComponents = new Set();
 let componentsConfig = null;
@@ -158,6 +159,7 @@ export const loadScssModule = (styles) => {
 }
 
 export default {
+	registerCallbacks,
 	init,
 	registerModules,
 	initCurrencyInput,

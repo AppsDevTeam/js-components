@@ -1,5 +1,15 @@
 # ADT JS Components
 
+
+## Callbacks (3.2.1)
+
+Attributes naming a function (`data-adt-submit-form-before-callback`, callbacks of `Map` and `Recaptcha`)
+call only functions registered by `AdtJsComponents.registerCallbacks({ name: fn })`; a plain page function
+on `window` still works with a deprecation warning, built-ins (`eval`, `fetch`, ... - native code) and names
+of `Object.prototype` / `Function.prototype` are refused. The body of an error response of `SubmitForm` is
+shown as text (only `text/plain`), never as HTML. Backported from 3.4.1 / 3.5 for projects that stay on 3.2
+(Select2); published with the npm dist-tag `release-3.2`, `latest` stays on the current major line.
+
 ## Installation
 
 ```

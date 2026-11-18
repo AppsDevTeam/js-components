@@ -1,6 +1,7 @@
 import naja from 'naja';
 import Nette from 'nette-forms';
 import observe from '../observe';
+import { resolveCallback } from '../callbacks';
 
 function isList(el) {
 	return el.type === 'checkbox' && el.name.endsWith('[]') || el.type === 'radio';
@@ -192,7 +193,7 @@ function run(options) {
 		const button = element === form ? null : element;
 
 		const beforeCallback = element.getAttribute('data-adt-submit-form-before-callback');
-		if (beforeCallback && !window[beforeCallback]()) {
+		if (beforeCallback && !resolveCallback(beforeCallback)?.()) {
 			event.preventDefault();
 			return;
 		}
@@ -218,9 +219,7 @@ function run(options) {
 		}
 
 		const afterCallback = context.element.getAttribute('data-adt-submit-form-after-callback');
-		if (afterCallback) {
-			window[afterCallback](payload, event.detail);
-		}
+		resolveCallback(afterCallback)?.(payload, event.detail);
 	});
 
 	naja.addEventListener('error', async (event) => {

@@ -1,4 +1,5 @@
 import naja from 'naja';
+import { resolveCallback } from '../callbacks';
 
 let recaptchaScript = null;
 
@@ -32,7 +33,7 @@ async function submitWithRecaptcha(submitter, options) {
 	$(submitter).closest('form').find('input[name=recaptchaToken]').val(token);
 
 	if (options.callback) {
-		window[options.callback]();
+		resolveCallback(options.callback)?.();
 	} else {
 		naja.uiHandler.submitForm(submitter).catch(() => {
 			// errors are handled by naja.addEventListener('error', ...)
