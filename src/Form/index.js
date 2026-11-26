@@ -118,6 +118,13 @@ function run(options) {
 		if (snippet.matches('[data-adt-errors-for]')) {
 			markErrorsFor(snippet);
 		}
+
+		// Naja initializes only forms inside a redrawn snippet; a snippet inside a form would leave the blocks
+		// driven by toggles in their original state
+		const form = snippet.closest('form');
+		if (form) {
+			Nette.toggleForm(form);
+		}
 	});
 
 	document.addEventListener('input', (e) => {
