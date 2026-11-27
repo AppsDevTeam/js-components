@@ -21,6 +21,7 @@ const registeredModules = { fancyadmin: {}, app: {} };
 // [data-adt-<key>]), loader]. Each one is its own chunk loaded once its element shows up in the document.
 const BUILTINS = {
 	AjaxSelect: ['ajax-select', null, () => import('./AjaxSelect/index.js')],
+	Confirm: ['confirm', null, () => import('./Confirm/index.js')],
 	Chart: ['chart', 'canvas[data-adt-chart]', () => import('./Chart/index.js')],
 	CurrencyInput: ['currency-input', null, () => import('./CurrencyInput/index.js')],
 	DateInput: ['date-input', null, () => import('./DateInput/index.js')],
@@ -33,8 +34,11 @@ const BUILTINS = {
 	Recaptcha: ['recaptcha', null, () => import('./Recaptcha/index.js')],
 	RedrawSnippet: ['redraw-snippet', null, () => import('./RedrawSnippet/index.js')],
 	Replicator: ['replicator', null, () => import('./Replicator/index.js')],
+	ReplicatorRows: ['replicator-rows', null, () => import('./ReplicatorRows/index.js')],
 	// data-adt-select2 = the attribute of the PHP side from the times of Select2
 	Select: ['select', 'select[data-adt-select], select[data-adt-select2]', () => import('./Select/index.js')],
+	SelectAll: ['select-all', null, () => import('./SelectAll/index.js')],
+	SubmitOnChange: ['submit-on-change', null, () => import('./SubmitOnChange/index.js')],
 	Translate: ['translate', null, () => import('./Translate/index.js')],
 };
 

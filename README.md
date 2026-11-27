@@ -28,7 +28,18 @@ Built-ins start on `data-adt-<name>` (e.g. `data-adt-redraw-snippet`), `Form` on
 (JSON keyed by the name, e.g. `{"select": {"selector": "select:not(.select-default)"}}`), options of an element to its
 attribute (JSON, e.g. `data-adt-date-input='{"format": "H:i"}'`).
 
-Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`) use [Naja](https://naja.js.org) (peer
+Small built-ins for admin forms:
+
+- `data-adt-confirm="<question>"` on a link or button - goes through only once confirmed (before Naja).
+- `data-adt-submit-on-change="<button name>"` on a field - a change submits the form by that button through Naja.
+- `data-adt-replicator-rows="<button name>"` around a table with a `Replicator` in its `tbody` - the add button
+  (`data-adt-replicator-rows-add`) may stand anywhere in the wrapper, removing a row submits the form by the button.
+- `data-adt-select-all` on a multiple `select` of `Select` / `AjaxSelect` - a button in the dropdown adds every result
+  of the current search; its text is the option `label` (`{"select-all": {"label": "Vybrat všechny nalezené (%count%)"}}`).
+
+`Form` re-runs the nette-forms toggles of a form whose snippet inside it was redrawn.
+
+Components sending AJAX requests (`Form`, `RedrawSnippet`, `Recaptcha`, `SubmitOnChange`, `ReplicatorRows`) use [Naja](https://naja.js.org) (peer
 dependency - one instance for the project and the components), the project installs and initializes it:
 
 ```
