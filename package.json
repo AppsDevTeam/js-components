@@ -1,6 +1,6 @@
 {
   "name": "adt-js-components",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "JavaScript components for Nette framework",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,7 @@
     "chart.js": "^4.6.1",
     "flatpickr": "^4.6.13",
     "glightbox": "^3.3.1",
+    "hugerte": "^1.0.15",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "nette-forms": "^3.5.4",

@@ -175,6 +175,26 @@ AdtJsComponents.registerChartPlugins({
 `data-adt-date-input` with JSON options (`format`, `value`, `minDate`, `maxDate`, `minTime`, `maxTime`, `altInput`...) -
 flatpickr, `type="time"` only the time, the language from `<html lang>`.
 
+### HugeRte
+
+`textarea[data-adt-huge-rte]` - rich text editor [HugeRTE](https://github.com/hugerte/hugerte) (the MIT fork of
+TinyMCE 6). Everything is bundled (skins, icons, plugins `autolink code fullscreen image link lists media nonbreaking
+table`), nothing is loaded from the server. The language follows `<html lang>` (Czech is our own translation, any
+other language stays English), the skin follows `data-bs-theme` of `<html>` - the editor is rebuilt when it changes.
+The textarea is kept in sync while typing and before every Naja request.
+
+The options are [TinyMCE 6 settings](https://www.tiny.cloud/docs/tinymce/6/) - for all editors in
+`data-adt-js-components` under `huge-rte`, for one editor in the attribute (`data-adt-huge-rte='{"min_height": 500}'`).
+On top of them:
+
+- `protect` - patterns as strings (JSON has no RegExp), e.g. `["<script>[\\s\\S]*?<\\/script>"]`.
+- `pickLocalImage` - the image dialog gets a button picking a file from the disk; the image goes into the content as
+  `blob:` and the saved HTML carries it as `data:`, what to do with it is up to the server.
+
+```json
+{"huge-rte": {"toolbar": "undo redo | blocks | bold italic | link image table | code", "pickLocalImage": true}}
+```
+
 ### Recaptcha
 
 `data-adt-recaptcha` on the form.

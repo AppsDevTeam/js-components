@@ -29,6 +29,7 @@ const BUILTINS = {
 	Form: ['submit-form', 'form', () => import('./Form/index.js')],
 	GLightbox: ['glightbox', null, () => import('./GLightbox/index.js')],
 	GoogleMaps: ['google-maps', null, () => import('./GoogleMaps/index.js')],
+	HugeRte: ['huge-rte', 'textarea[data-adt-huge-rte]', () => import('./HugeRte/index.js')],
 	InputClear: ['input-clear', null, () => import('./InputClear/index.js')],
 	Map: ['map', null, () => import('./Map/index.js')],
 	Recaptcha: ['recaptcha', null, () => import('./Recaptcha/index.js')],
